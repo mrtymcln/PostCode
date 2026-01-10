@@ -1,0 +1,17 @@
+//
+//  PostCodeTests.swift
+//  PostCodeTests
+//
+//  Created by Marty McLean on 10/1/2026.
+//
+
+import Testing
+@testable import PostCode
+
+struct PostCodeTests {
+
+    @Test func example() async throws {
+        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+    }
+
+}
