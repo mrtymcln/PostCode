@@ -1,10 +1,3 @@
-//
-//  PostCodeUITests.swift
-//  PostCodeUITests
-//
-//  Created by Marty McLean on 10/1/2026.
-//
-
 import XCTest
 
 final class PostCodeUITests: XCTestCase {
