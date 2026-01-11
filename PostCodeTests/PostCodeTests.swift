@@ -77,7 +77,7 @@ struct TimecodeLogicTests {
     }
 }
 
-// Helper for comparing doubles (floating point math is rarely exact)
+// Helper for comparing doubles (floating point maths is rarely exact)
 extension Double {
     func isApproximately(_ other: Double, within tolerance: Double) -> Bool {
         return abs(self - other) < tolerance

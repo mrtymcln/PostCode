@@ -1,9 +1,5 @@
 import SwiftUI
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
-}
+
 // MARK: - Data Models
 enum Operation {
     case add, subtract, multiply, divide, none
@@ -33,39 +29,42 @@ struct ContentView: View {
     @AppStorage("selectedFrameRate") private var selectedFrameRate: FrameRate = .fps25
     @AppStorage("lastRunVersion") private var lastRunVersion: String = "0.0.0"
     
+// MARK: - UI STATE
     @State private var showClearAlert = false
     @State private var showAboutSheet = false
     @State private var mode: AppMode = .calculator
     @State private var oldFrameRate: FrameRate = .fps25
-
     @State private var showWelcomeSheet = false
     @State private var showCustomFpsAlert = false
     @State private var customFpsInput = ""
-
-// MARK: - CALC MODE
+    
+    // HARDWARE FOCUS
+    @FocusState private var isViewFocused: Bool
+    
+// MARK: - CALCULATOR STATE
     @State private var inputString = ""
     @State private var tickerTape: [String] = []
     @State private var accumulatedFrames = 0
     @State private var pendingOperation: Operation = .none
     @State private var lastWasEquals = false
     @State private var isFramesMode = false
-
-// MARK: - RUN MODE (TRT)
+    
+// MARK: - TRT STATE
     @State private var batchList: [BatchEntry] = []
     @State private var trtInString = ""
     @State private var trtOutString = ""
     @State private var activeTrtField: TrtField = .inPoint
-
-// MARK: - CONSTANTS & COLOURS
+    
+// MARK: - CONSTANTS
     private let buttonSpacing: CGFloat = 16
     private let colorDarkGray = Color(red: 0.2, green: 0.2, blue: 0.2)
     private let colorLightGray = Color(UIColor.lightGray)
     private let colorOrange = Color.orange
     private let colorGreen = Color(red: 0.0, green: 0.8, blue: 0.4)
-    
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
     private let ipadSidebarWidth: CGFloat = 400
-
+    
+// MARK: - COMPUTED PROPERTIES
     var exportText: String {
         if mode == .calculator {
             return tickerTape.joined(separator: "\n")
@@ -90,9 +89,7 @@ struct ContentView: View {
     }
     
     var trtRealTimeString: String? {
-        guard selectedFrameRate.rateMultiplier != 1.0, !selectedFrameRate.isDropFrame else {
-            return nil
-        }
+        guard selectedFrameRate.rateMultiplier != 1.0, !selectedFrameRate.isDropFrame else { return nil }
         let totalFrames = batchList.reduce(0) { $0 + $1.durationFrames }
         let totalSeconds = TimecodeCalculator.framesToRealSeconds(totalFrames: totalFrames, fps: selectedFrameRate)
         let h = Int(totalSeconds / 3600)
@@ -103,47 +100,57 @@ struct ContentView: View {
 
 // MARK: - BODY
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                if isPad {
-                    ipadLayout
-                } else {
-                    iphoneLayout
-                }
-            }
-            .ignoresSafeArea(.keyboard)
-            .onAppear {
-                oldFrameRate = selectedFrameRate
-                checkForUpdate()
-            }
-            .alert("Custom frame rate", isPresented: $showCustomFpsAlert) {
-                TextField(" 1-999", text: $customFpsInput)
-                    .keyboardType(.numberPad)
-                Button("Cancel", role: .cancel) { }
-                Button("OK") {
-                    if let newBase = Int(customFpsInput), newBase > 0 {
-                        let customRate = FrameRate(id: "\(newBase)", baseFPS: newBase)
-                        changeFrameRate(to: customRate)
+        GeometryReader { geo in
+            NavigationStack {
+                ZStack {
+                    // BACKGROUND
+                    Color.black.ignoresSafeArea()
+                        .onTapGesture { isViewFocused = true }
+                    
+                    if isPad {
+                        ipadLayout(width: geo.size.width, height: geo.size.height)
+                    } else {
+                        iphoneLayout(width: geo.size.width, height: geo.size.height)
                     }
-                    customFpsInput = ""
                 }
-            } message: {
-                Text("")
+                .ignoresSafeArea(.keyboard)
+                
+                // ALERTS
+                .alert("Custom frame rate", isPresented: $showCustomFpsAlert) {
+                    TextField(" 1-999", text: $customFpsInput).keyboardType(.numberPad)
+                    Button("Cancel", role: .cancel) { }
+                    Button("OK") {
+                        if let newBase = Int(customFpsInput), newBase > 0 {
+                            let customRate = FrameRate(id: "\(newBase)", baseFPS: newBase)
+                            changeFrameRate(to: customRate)
+                        }
+                        customFpsInput = ""
+                    }
+                } message: { Text("") }
             }
-        }
-        .sheet(isPresented: $showAboutSheet) {
-            Text("About PostCode").presentationDetents([.medium])
-        }
-        .sheet(isPresented: $showWelcomeSheet, onDismiss: {
-            if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-                lastRunVersion = currentVersion
+
+            .sheet(isPresented: $showWelcomeSheet, onDismiss: {
+                if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                    lastRunVersion = currentVersion
+                }
+            }) {
+                WelcomeView()
             }
-        }) {
-            WelcomeView()
+            .preferredColorScheme(.dark)
         }
-        .preferredColorScheme(.dark)
+        // GLOBAL KEYBOARD HANDLER
+        .focusable()
+        .focused($isViewFocused)
+        .onKeyPress { press in
+            handleHardwareKey(press)
+        }
+        .task {
+            // Force focus after a short delay to ensure iPad catches it
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            isViewFocused = true
+            oldFrameRate = selectedFrameRate
+            checkForUpdate()
+        }
     }
 }
 
@@ -151,23 +158,20 @@ struct ContentView: View {
 extension ContentView {
     
     // IPAD LAYOUT
-    private var ipadLayout: some View {
+    private func ipadLayout(width: CGFloat, height: CGFloat) -> some View {
         HStack(spacing: 0) {
             ZStack {
                 if mode == .calculator {
-                    tickerTapeView
-                        .padding(.top, 20)
+                    tickerTapeView.padding(.top, 20)
                 } else {
-                    trtListView
-                        .padding(.top, 20)
+                    trtListView.padding(.top, 20)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture { isViewFocused = true }
             
-            Rectangle()
-                .fill(Color(UIColor.systemGray6))
-                .frame(width: 1)
-                .opacity(0.3)
+            Rectangle().fill(Color(UIColor.systemGray6)).frame(width: 1).opacity(0.3)
             
             VStack(spacing: 0) {
                 headerView
@@ -191,48 +195,38 @@ extension ContentView {
         }
     }
     
-    // --- IPHONE LAYOUT ---
-    // FIX 1: Wrapped in GeometryReader to safely get screen width without UIScreen.main
-    private var iphoneLayout: some View {
-        GeometryReader { geo in
-            VStack(spacing: 0) {
-                // 1. HEADER
-                headerView
-                    .padding(.vertical, 10)
-                    .zIndex(10)
-                
-                // 2. MAIN DISPLAY
-                // Includes infinity frame fix to prevent squishing
-                ZStack {
-                    if mode == .calculator {
-                        tickerTapeView
-                    } else {
-                        trtListView
-                    }
+    // IPHONE LAYOUT
+    private func iphoneLayout(width: CGFloat, height: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            headerView
+                .padding(.vertical, 10)
+                .zIndex(10)
+            
+            ZStack {
+                if mode == .calculator {
+                    tickerTapeView
+                } else {
+                    trtListView
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                
-                // 3. INPUT AREA
-                if mode == .trt {
-                    trtInputArea
-                        .padding(.bottom, 10)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-                
-                // 4. KEYPAD
-                // Pass the safe geometry width instead of using the global screen
-                keypadLayout(width: geo.size.width)
-                    .padding(.bottom, 20)
             }
-            // Explicitly match the GeometryReader size so the VStack doesn't float
-            .frame(width: geo.size.width, height: geo.size.height)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture { isViewFocused = true }
+            
+            if mode == .trt {
+                trtInputArea
+                    .padding(.bottom, 10)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            
+            keypadLayout(width: width)
+                .padding(.bottom, 20)
         }
     }
     
-    // --- HEADER ---
+    // HEADER
     private var headerView: some View {
         HStack(spacing: 8) {
-            
             Menu {
                 ForEach(FrameRate.allCases) { rate in
                     Button(action: { changeFrameRate(to: rate) }) {
@@ -284,7 +278,7 @@ extension ContentView {
         }
     }
     
-    // --- CALC MODE VIEW ---
+    // TICKER TAPE IN CALCULATOR MODE
     private var tickerTapeView: some View {
         ScrollView {
             ScrollViewReader { proxy in
@@ -315,7 +309,7 @@ extension ContentView {
         .padding(.bottom, 10)
     }
     
-    // --- RUN MODE LIST VIEW ---
+    // TICKER TAPE IN TRT MODE
     private var trtListView: some View {
         VStack(spacing: 0) {
             HStack {
@@ -323,12 +317,10 @@ extension ContentView {
                     .font(.headline)
                     .foregroundColor(.white)
                 Spacer()
-                
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(trtTotalString)
                         .font(.system(size: 32, weight: .bold, design: .monospaced))
                         .foregroundColor(colorGreen)
-                    
                     if let realTime = trtRealTimeString {
                         Text(realTime)
                             .font(.system(size: 14, weight: .medium, design: .rounded))
@@ -345,61 +337,39 @@ extension ContentView {
             List {
                 ForEach(Array(batchList.enumerated()), id: \.element) { index, entry in
                     HStack {
-                        Text("#\(index + 1)")
-                            .font(.caption)
-                            .foregroundColor(.white)
-                            .frame(width: 30, alignment: .leading)
-                        
+                        Text("#\(index + 1)").font(.caption).foregroundColor(.white).frame(width: 30, alignment: .leading)
                         VStack(alignment: .leading) {
                             Text("IN:  \(entry.inPoint)")
                             Text("OUT: \(entry.outPoint)")
                         }
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.white)
-                        
+                        .font(.system(.caption, design: .monospaced)).foregroundColor(.white)
                         Spacer()
-                        
-                        Text(entry.durationString)
-                            .font(.system(.body, design: .monospaced))
-                            .fontWeight(.bold)
-                            .foregroundColor(.orange)
+                        Text(entry.durationString).font(.system(.body, design: .monospaced)).fontWeight(.bold).foregroundColor(.orange)
                     }
                     .listRowBackground(Color.black)
                     .listRowSeparatorTint(.gray)
                 }
-                .onDelete { indexSet in
-                    batchList.remove(atOffsets: indexSet)
-                }
+                .onDelete { indexSet in batchList.remove(atOffsets: indexSet) }
             }
             .listStyle(.plain)
         }
     }
     
-    // --- RUN MODE INPUT AREA ---
+    // TRT MODE INPUTS
     private var trtInputArea: some View {
         HStack(spacing: 12) {
-            inputField(label: "IN:",
-                       value: formatInput(trtInString),
-                       isActive: activeTrtField == .inPoint)
-            .onTapGesture { activeTrtField = .inPoint }
-            
-            inputField(label: "OUT:",
-                       value: formatInput(trtOutString),
-                       isActive: activeTrtField == .outPoint)
-            .onTapGesture { activeTrtField = .outPoint }
+            inputField(label: "IN:", value: formatInput(trtInString), isActive: activeTrtField == .inPoint)
+                .onTapGesture { activeTrtField = .inPoint }
+            inputField(label: "OUT:", value: formatInput(trtOutString), isActive: activeTrtField == .outPoint)
+                .onTapGesture { activeTrtField = .outPoint }
             
             Button(action: {
                 let generator = UIImpactFeedbackGenerator(style: .medium)
                 generator.impactOccurred()
                 addBatchEntry()
             }) {
-                Image(systemName: "plus")
-                    .font(.title2)
-                    .bold()
-                    .foregroundColor(.white)
-                    .frame(width: 50, height: 50)
-                    .background(colorOrange)
-                    .clipShape(Circle())
+                Image(systemName: "plus").font(.title2).bold().foregroundColor(.white)
+                    .frame(width: 50, height: 50).background(colorOrange).clipShape(Circle())
             }
         }
         .padding()
@@ -408,21 +378,19 @@ extension ContentView {
         .padding(.horizontal, 16)
     }
     
-    // --- KEYPAD ---
+    // KEYPAD
     private func keypadLayout(width: CGFloat) -> some View {
-        let calcBtnSize = (width - (5 * 16)) / 4
+        let safeWidth = width > 0 ? width : 375
+        let calcBtnSize = (safeWidth - (5 * 16)) / 4
         
         return VStack(spacing: buttonSpacing) {
             HStack(spacing: buttonSpacing) {
                 CalcButton(label: "7", color: colorDarkGray, customSize: calcBtnSize) { addDigit("7") }
                 CalcButton(label: "8", color: colorDarkGray, customSize: calcBtnSize) { addDigit("8") }
                 CalcButton(label: "9", color: colorDarkGray, customSize: calcBtnSize) { addDigit("9") }
-                
                 if mode == .calculator {
                     CalcButton(label: "Divide", systemImage: "divide", color: colorOrange, customSize: calcBtnSize) { setOperation(.divide) }
-                } else {
-                    Spacer().frame(width: calcBtnSize)
-                }
+                } else { Spacer().frame(width: calcBtnSize) }
             }
             HStack(spacing: buttonSpacing) {
                 CalcButton(label: "4", color: colorDarkGray, customSize: calcBtnSize) { addDigit("4") }
@@ -444,7 +412,6 @@ extension ContentView {
                 CalcButton(label: "0", color: colorDarkGray, customSize: calcBtnSize) { addDigit("0") }
                 CalcButton(label: "00", color: colorDarkGray, customSize: calcBtnSize) { addDigit("00") }
                 CalcButton(label: "Backspace", systemImage: "delete.left", color: colorLightGray, textColor: .black, customSize: calcBtnSize) { backspace() }
-                
                 if mode == .calculator {
                     CalcButton(label: "Plus", systemImage: "plus", color: colorOrange, customSize: calcBtnSize) { setOperation(.add) }
                 } else { Spacer().frame(width: calcBtnSize) }
@@ -456,8 +423,7 @@ extension ContentView {
                         generator.impactOccurred()
                         calculateResult()
                     }) {
-                        RoundedRectangle(cornerRadius: 40)
-                            .fill(Color.orange)
+                        RoundedRectangle(cornerRadius: 40).fill(Color.orange)
                             .overlay(Image(systemName: "equal").font(.largeTitle).fontWeight(.semibold).foregroundColor(.white))
                             .frame(height: calcBtnSize)
                     }
@@ -466,7 +432,55 @@ extension ContentView {
         }
     }
     
-    // --- HELPER COMPONENTS ---
+// MARK: - KEYBOARD HANDLER
+    func handleHardwareKey(_ press: KeyPress) -> KeyPress.Result {
+        let char = press.characters
+        
+        if mode == .calculator {
+            // OPERATION SHORTCUTS
+            // Shift+Equals and Shift+8
+            if char == "+" || (char == "=" && press.modifiers.contains(.shift)) {
+                setOperation(.add); return .handled
+            }
+            if char == "*" || char == "x" || (char == "8" && press.modifiers.contains(.shift)) {
+                setOperation(.multiply); return .handled
+            }
+            
+            // Standard Operations
+            if char == "-" { setOperation(.subtract); return .handled }
+            if char == "/" { setOperation(.divide); return .handled }
+            if char == "=" { calculateResult(); return .handled }
+            
+            // Clear
+            if char == "c" || char == "C" { clearAll(); return .handled }
+        }
+        
+        // NUMBERS
+        // Guard against Shift being held (so Shift+8 doesn't double-trigger '8' and '*')
+        if "0123456789".contains(char) && !press.modifiers.contains(.shift) {
+            addDigit(char)
+            return .handled
+        }
+        
+        // DELETE
+        if press.key == .delete { backspace(); return .handled }
+        
+        // ENTER AND RETURN
+        if press.key == .return || char == "\r" || char == "\n" || char == "\u{3}" {
+            if mode == .calculator { calculateResult() } else { addBatchEntry() }
+            return .handled
+        }
+        
+        // 5. TAB FOR TRT MODE
+        if press.key == .tab && mode == .trt {
+            activeTrtField = (activeTrtField == .inPoint) ? .outPoint : .inPoint
+            return .handled
+        }
+        
+        return .ignored
+    }
+    
+// MARK: - HELPERS
     private func pillLabel(text: String, icon: String, color: Color = Color(UIColor.systemGray5)) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon).font(.body)
@@ -489,18 +503,16 @@ extension ContentView {
                 .font(.system(.subheadline, design: .monospaced))
                 .foregroundColor(isActive ? colorGreen : .white)
         }
-        .padding(8)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8).frame(maxWidth: .infinity, alignment: .leading)
         .background(isActive ? colorGreen.opacity(0.1) : Color.black.opacity(0.3))
         .cornerRadius(8)
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(isActive ? colorGreen : Color.clear, lineWidth: 1))
     }
     
+// MARK: - LOGIC
     func checkForUpdate() {
         if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-            if currentVersion != lastRunVersion {
-                showWelcomeSheet = true
-            }
+            if currentVersion != lastRunVersion { showWelcomeSheet = true }
         }
     }
     
@@ -521,20 +533,12 @@ extension ContentView {
     func addBatchEntry() {
         let inFrames = TimecodeCalculator.inputToFrames(input: trtInString, fps: selectedFrameRate)
         let outFrames = TimecodeCalculator.inputToFrames(input: trtOutString, fps: selectedFrameRate)
-        
         let dur = outFrames - inFrames
         if dur > 0 {
             let durString = TimecodeCalculator.framesToString(totalFrames: dur, fps: selectedFrameRate)
-            let entry = BatchEntry(
-                inPoint: formatInput(trtInString),
-                outPoint: formatInput(trtOutString),
-                durationFrames: dur,
-                durationString: durString
-            )
+            let entry = BatchEntry(inPoint: formatInput(trtInString), outPoint: formatInput(trtOutString), durationFrames: dur, durationString: durString)
             batchList.append(entry)
-            trtInString = ""
-            trtOutString = ""
-            activeTrtField = .inPoint
+            trtInString = ""; trtOutString = ""; activeTrtField = .inPoint
         }
     }
     
@@ -553,25 +557,20 @@ extension ContentView {
             }
         }
         isFramesMode.toggle()
-        
         var newTape: [String] = []
         for line in tickerTape {
-            let prefix = line.hasPrefix("= ") ? "= " : (line.hasPrefix("  ") ? "  " : "")
-            let cleanLine = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
-            if cleanLine.count <= 1 && !cleanLine.first!.isNumber {
-                newTape.append(line)
-                continue
-            }
+            if line.count <= 1 && !line.first!.isNumber { newTape.append(line); continue }
+            let clean = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
             if isFramesMode {
-                let rawInput = cleanLine.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
-                if cleanLine.contains(":") || cleanLine.contains(";") {
+                let rawInput = clean.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
+                if line.contains(":") || line.contains(";") {
                     let frames = TimecodeCalculator.inputToFrames(input: rawInput, fps: selectedFrameRate)
-                    newTape.append(prefix + "\(frames)")
+                    newTape.append(line.replacingOccurrences(of: clean, with: "\(frames)"))
                 } else { newTape.append(line) }
             } else {
-                if let frames = Int(cleanLine) {
+                if let frames = Int(clean) {
                     let tc = TimecodeCalculator.framesToString(totalFrames: frames, fps: selectedFrameRate)
-                    newTape.append(prefix + tc)
+                    newTape.append(line.replacingOccurrences(of: clean, with: tc))
                 } else { newTape.append(line) }
             }
         }
@@ -581,81 +580,44 @@ extension ContentView {
     func addDigit(_ digit: String) {
         if mode == .calculator {
             if lastWasEquals {
-                inputString = ""
-                accumulatedFrames = 0
-                tickerTape.append("----------------")
-                lastWasEquals = false
+                inputString = ""; accumulatedFrames = 0; tickerTape.append("----------------"); lastWasEquals = false
             }
             let limit = isFramesMode ? 12 : (6 + selectedFrameRate.frameDigits)
             if inputString.count < limit { inputString += digit }
         } else {
             let limit = 6 + selectedFrameRate.frameDigits
-            if activeTrtField == .inPoint {
-                if trtInString.count < limit { trtInString += digit }
-            } else {
-                if trtOutString.count < limit { trtOutString += digit }
-            }
+            if activeTrtField == .inPoint { if trtInString.count < limit { trtInString += digit } }
+            else { if trtOutString.count < limit { trtOutString += digit } }
         }
     }
     
     func backspace() {
-        if mode == .calculator {
-            if !inputString.isEmpty { inputString.removeLast() }
-        } else {
-            if activeTrtField == .inPoint {
-                if !trtInString.isEmpty { trtInString.removeLast() }
-            } else {
-                if !trtOutString.isEmpty { trtOutString.removeLast() }
-            }
+        if mode == .calculator { if !inputString.isEmpty { inputString.removeLast() } }
+        else {
+            if activeTrtField == .inPoint { if !trtInString.isEmpty { trtInString.removeLast() } }
+            else { if !trtOutString.isEmpty { trtOutString.removeLast() } }
         }
     }
     
     func clearAll() {
-        if mode == .calculator {
-            inputString = ""
-            tickerTape = []
-            accumulatedFrames = 0
-            pendingOperation = .none
-            lastWasEquals = false
-        } else {
-            batchList.removeAll()
-            trtInString = ""
-            trtOutString = ""
-        }
+        if mode == .calculator { inputString = ""; tickerTape = []; accumulatedFrames = 0; pendingOperation = .none; lastWasEquals = false }
+        else { batchList.removeAll(); trtInString = ""; trtOutString = "" }
     }
     
     func getFormattedActiveDisplay() -> String {
-        if inputString.isEmpty {
-            return isFramesMode ? "0" : formatInput("")
-        }
-        if isFramesMode { return inputString }
-        return formatInput(inputString)
+        if inputString.isEmpty { return isFramesMode ? "0" : formatInput("") }
+        return isFramesMode ? inputString : formatInput(inputString)
     }
     
     func setOperation(_ op: Operation) {
         lastWasEquals = false
         let currentFrames = isFramesMode ? (Int(inputString) ?? 0) : TimecodeCalculator.inputToFrames(input: inputString, fps: selectedFrameRate)
-        let displayStr = getFormattedActiveDisplay()
-        let safeDisplay = displayStr
-        
-        if accumulatedFrames == 0 && pendingOperation == .none {
-            accumulatedFrames = currentFrames
-            tickerTape.append("  " + safeDisplay)
-        } else if !inputString.isEmpty {
-            tickerTape.append("  " + safeDisplay)
-            performMath(newInput: currentFrames)
-        }
+        let safeDisplay = getFormattedActiveDisplay()
+        if accumulatedFrames == 0 && pendingOperation == .none { accumulatedFrames = currentFrames; tickerTape.append("  " + safeDisplay) }
+        else if !inputString.isEmpty { tickerTape.append("  " + safeDisplay); performMath(newInput: currentFrames) }
         pendingOperation = op
-        let symbol: String
-        switch op {
-        case .add: symbol = "+"
-        case .subtract: symbol = "-"
-        case .multiply: symbol = "×"
-        case .divide: symbol = "÷"
-        default: symbol = "?"
-        }
-        tickerTape.append(symbol)
-        inputString = ""
+        let symbol = switch op { case .add: "+"; case .subtract: "-"; case .multiply: "×"; case .divide: "÷"; default: "?" }
+        tickerTape.append(symbol); inputString = ""
     }
     
     func calculateResult() {
@@ -665,9 +627,7 @@ extension ContentView {
         performMath(newInput: currentFrames)
         let resultStr = isFramesMode ? "\(accumulatedFrames)" : TimecodeCalculator.framesToString(totalFrames: accumulatedFrames, fps: selectedFrameRate)
         tickerTape.append("= " + resultStr)
-        inputString = ""
-        pendingOperation = .none
-        lastWasEquals = true
+        inputString = ""; pendingOperation = .none; lastWasEquals = true
     }
     
     func performMath(newInput: Int) {
@@ -681,8 +641,7 @@ extension ContentView {
     }
     
     func convertHistory(from oldRate: FrameRate, to newRate: FrameRate) {
-        guard oldRate != newRate else { return }
-        if isFramesMode { return }
+        guard oldRate != newRate, !isFramesMode else { return }
         var newTape: [String] = []
         for line in tickerTape {
             if line.contains(":") || line.contains(";") {
@@ -705,110 +664,73 @@ extension ContentView {
         let digits = Array(padded)
         let sep = selectedFrameRate.isDropFrame ? ";" : ":"
         var text = "\(digits[0])\(digits[1])\(sep)\(digits[2])\(digits[3])\(sep)\(digits[4])\(digits[5])\(sep)"
-        let fStart = 6
-        let fEnd = 6 + fDigits - 1
-        if fEnd < digits.count {
-            text += String(digits[fStart...fEnd])
-        }
+        if (6 + fDigits - 1) < digits.count { text += String(digits[6...(6 + fDigits - 1)]) }
         return text
     }
-    
+}
+
 // MARK: - REUSABLE COMPONENTS
-    struct CalcButton: View {
-        let label: String
-        var systemImage: String? = nil
-        let color: Color
-        var textColor: Color = .white
-        var customSize: CGFloat? = nil
-        let action: () -> Void
-        
-        private var size: CGFloat {
-            if let custom = customSize { return custom }
-            // FIX 2: Replaced UIScreen.main fallback with a constant to stop the deprecation error.
-            // This fallback is effectively dead code in this app because we always provide customSize.
-            return 80
-        }
-        
-        var body: some View {
-            Button(action: {
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.impactOccurred()
-                action()
-            }) {
-                ZStack {
-                    Circle().fill(color)
-                    if let systemImage = systemImage {
-                        Image(systemName: systemImage)
-                            .font(.system(size: 35, weight: .semibold))
-                            .foregroundColor(textColor)
-                    } else {
-                        Text(label)
-                            .font(.system(size: 40, weight: .medium, design: .rounded))
-                            .foregroundColor(textColor)
-                    }
-                }
-                .frame(width: size, height: size)
-            }
-        }
+struct CalcButton: View {
+    let label: String
+    var systemImage: String? = nil
+    let color: Color
+    var textColor: Color = .white
+    var customSize: CGFloat? = nil
+    let action: () -> Void
+    private var size: CGFloat {
+        if let custom = customSize { return custom }
+        // FIX to ensure screen width is valid to avoid "Invalid frame dimension" crash
+        let screenW = UIScreen.main.bounds.width
+        return screenW > 0 ? (screenW - (5 * 16)) / 4 : 70
     }
-    
-// MARK: -  WELCOME SHEET
-    struct WelcomeView: View {
-        @Environment(\.dismiss) var dismiss
-        var body: some View {
-            VStack(spacing: 0) {
-                ScrollView {
-                    VStack(spacing: 30) {
-                        Text("Welcome to PostCode")
-                            .font(.largeTitle).bold()
-                            .multilineTextAlignment(.center)
-                            .padding(.top, 40)
-                        Text("Created by Marty McLean")
-                            .font(.title3)
-                            .multilineTextAlignment(.center)
-                        VStack(alignment: .leading, spacing: 20) {
-                            featureRow(icon: "plus.circle", title: "Calc Mode", desc: "Add, subtract, multiply, and divide timecodes.")
-                            featureRow(icon: "arrow.left.arrow.right", title: "TC / Fr Conversion", desc: "Instantly convert between timecode and frame count.")
-                            featureRow(icon: "figure.run", title: "Run Mode", desc: "Enter In/Out points to calculate total run time.")
-                            featureRow(icon: "film.stack", title: "Frame Rates", desc: "Supports all SMPTE standards.")
-                            featureRow(icon: "square.and.arrow.up", title: "Share", desc: "Save calculations as text.")
-                        }
-                        .padding()
-                    }
-                }
-                Button(action: { dismiss() }) {
-                    Text("Continue")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 20)
-                .padding(.top, 10)
-            }
-            .preferredColorScheme(.dark)
-        }
-        
-        func featureRow(icon: String, title: String, desc: String) -> some View {
-            HStack(spacing: 15) {
-                Image(systemName: icon)
-                    .font(.largeTitle)
-                    .foregroundColor(.blue)
-                    .frame(width: 50)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.headline)
-                    Text(desc).font(.subheadline).foregroundColor(.gray).fixedSize(horizontal: false, vertical: true)
+    var body: some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            action()
+        }) {
+            ZStack {
+                Circle().fill(color)
+                if let systemImage = systemImage {
+                    Image(systemName: systemImage).font(.system(size: 35, weight: .semibold)).foregroundColor(textColor)
+                } else {
+                    Text(label).font(.system(size: 40, weight: .medium, design: .rounded)).foregroundColor(textColor)
                 }
             }
+            // If customSize is nil, let the parent container size the button via frame
+            .frame(width: size, height: size)
         }
     }
-    
-    struct YourView_Previews: PreviewProvider {
-        static var previews: some View {
-            ContentView()
+}
+
+struct WelcomeView: View {
+    @Environment(\.dismiss) var dismiss
+    var body: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 30) {
+                    Text("Welcome to PostCode").font(.largeTitle).bold().padding(.top, 40)
+                    Text("Created by Marty McLean").font(.title3)
+                    VStack(alignment: .leading, spacing: 20) {
+                        featureRow(icon: "plus.circle", title: "Calc Mode", desc: "Add, subtract, multiply, and divide timecodes.")
+                        featureRow(icon: "arrow.left.arrow.right", title: "TC / Fr Conversion", desc: "Instantly convert between timecode and frames.")
+                        featureRow(icon: "figure.run", title: "Run Mode", desc: "Calculate TRT for multiple segments.")
+                        featureRow(icon: "film.stack", title: "Frame Rates", desc: "Supports all SMPTE standards.")
+                        featureRow(icon: "square.and.arrow.up", title: "Share", desc: "Export calculations as text.")
+                    }.padding()
+                }
+            }
+            Button(action: { dismiss() }) { Text("Continue").font(.headline).foregroundColor(.white).frame(maxWidth: .infinity).padding().background(Color.blue).cornerRadius(12) }.padding(20)
+        }.preferredColorScheme(.dark)
+    }
+    func featureRow(icon: String, title: String, desc: String) -> some View {
+        HStack(spacing: 15) {
+            Image(systemName: icon).font(.largeTitle).foregroundColor(.blue).frame(width: 50)
+            VStack(alignment: .leading, spacing: 2) { Text(title).font(.headline); Text(desc).font(.subheadline).foregroundColor(.gray).fixedSize(horizontal: false, vertical: true) }
         }
     }
+}
+
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View { ContentView() }
 }
