@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Data Models
+// MARK: - DATA MODELS
 enum Operation {
     case add, subtract, multiply, divide, none
 }
@@ -104,28 +104,35 @@ struct ContentView: View {
         return String(format: "Real: %dh %dm %.1fs", h, m, s)
     }
     
-    // FIX: Improved maths for Converter Mode
     var convResultString: String {
-        // 1. Direct Pass-through (Fixes the 25->25 drift issue)
+        // 1. Direct Pass-through
         if convSourceRate == convDestRate {
             return getFormattedConvInput()
         }
         
-        // 2. Calculate Source Frames
-        let srcFrames = Double(TimecodeCalculator.inputToFrames(input: convInputString, fps: convSourceRate))
+        // 2. Determine Source Frames (handle TC vs Frames input)
+        let srcFrames: Double
+        if isFramesMode {
+            srcFrames = Double(Int(convInputString) ?? 0)
+        } else {
+            srcFrames = Double(TimecodeCalculator.inputToFrames(input: convInputString, fps: convSourceRate))
+        }
         
         // 3. High Precision Conversion
-        // Formula: DstFrames = SrcFrames * (SrcMult / SrcBase) * (DstBase / DstMult)
-        // This bypasses the "Real Seconds" calculation to avoid intermediate rounding errors
-        
         let srcBase = Double(convSourceRate.baseFPS)
         let srcMult = convSourceRate.rateMultiplier
         let dstBase = Double(convDestRate.baseFPS)
         let dstMult = convDestRate.rateMultiplier
         
         let exactFrames = srcFrames * (srcMult / srcBase) * (dstBase / dstMult)
+        let finalFrames = Int(round(exactFrames))
         
-        return TimecodeCalculator.framesToString(totalFrames: Int(round(exactFrames)), fps: convDestRate)
+        // 4. Return formatted string based on TC/FR toggle
+        if isFramesMode {
+            return "\(finalFrames)"
+        } else {
+            return TimecodeCalculator.framesToString(totalFrames: finalFrames, fps: convDestRate)
+        }
     }
 
 // MARK: - BODY
@@ -158,6 +165,7 @@ struct ContentView: View {
                     }
                 } message: { Text("") }
             }
+
             .sheet(isPresented: $showWelcomeSheet, onDismiss: {
                 if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
                     lastRunVersion = currentVersion
@@ -259,43 +267,40 @@ extension ContentView {
     // HEADER
     private var headerView: some View {
         HStack(spacing: 8) {
-            
-            // FPS MENU
-            // NOTE: We render this even in converter mode (invisible) to hold layout space
-            Menu {
-                ForEach(FrameRate.allCases) { rate in
-                    Button(action: { changeFrameRate(to: rate) }) {
-                        if selectedFrameRate.id == rate.id { Label(rate.id, systemImage: "checkmark") }
-                        else { Text(rate.id) }
-                    }
-                }
-                Button(action: { showCustomFpsAlert = true }) {
-                    Text("Custom...")
-                    if !FrameRate.allCases.contains(where: { $0.id == selectedFrameRate.id }) {
-                        Image(systemName: "checkmark")
-                    }
-                }
-            } label: {
-                pillLabel(text: selectedFrameRate.id, icon: "chevron.up.chevron.down")
-            }
-            // Hides it visually but keeps the layout footprint
-            .opacity(mode == .converter ? 0 : 1)
-            .disabled(mode == .converter)
-            
-            // 3-WAY TOGGLE BUTTON
+            // MODE PICKER
             Button(action: { withAnimation { toggleAppMode() } }) {
                 pillLabel(text: getModeLabel(),
                           icon: getModeIcon(),
                           color: Color(UIColor.systemGray5))
             }
-            
+            // FPS PICKER
+            if mode != .converter {
+                Menu {
+                    ForEach(FrameRate.allCases) { rate in
+                        Button(action: { changeFrameRate(to: rate) }) {
+                            if selectedFrameRate.id == rate.id { Label(rate.id, systemImage: "checkmark") }
+                            else { Text(rate.id) }
+                        }
+                    }
+                    Button(action: { showCustomFpsAlert = true }) {
+                        Text("Custom...")
+                        if !FrameRate.allCases.contains(where: { $0.id == selectedFrameRate.id }) {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                } label: {
+                    pillLabel(text: selectedFrameRate.id, icon: "chevron.up.chevron.down")
+                }
+            }
+            // TC/FR TOGGLE
             Button(action: { withAnimation { toggleDisplayMode() } }) {
                 pillLabel(text: isFramesMode ? "Fr" : "TC",
                           icon: isFramesMode ? "film" : "clock",
                           color: Color(UIColor.systemGray5))
             }
-            .opacity(mode == .calculator ? 1 : 0)
-            .disabled(mode != .calculator)
+            // Make toggle only visible in Calc and Conv modes
+            .opacity(mode == .trt ? 0 : 1)
+            .disabled(mode == .trt)
 
             Spacer()
             
@@ -394,13 +399,12 @@ extension ContentView {
         }
     }
     
-    // NEW: CONVERTER DISPLAY
+    // CONVERTER DISPLAY
     private var converterDisplayView: some View {
         VStack(spacing: 20) {
-            // FROM BOX
+            // From box
             VStack {
                 HStack {
-                    // Left-aligned Picker using Pill Style
                     Menu {
                         ForEach(FrameRate.allCases) { rate in
                             Button(rate.id) { convSourceRate = rate }
@@ -416,17 +420,16 @@ extension ContentView {
                     .font(.system(size: 50, weight: .bold, design: .monospaced))
                     .foregroundColor(.orange)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.5) // Prevents truncation
+                    .minimumScaleFactor(0.5)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .padding()
             .background(colorDarkGray)
             .cornerRadius(12)
             
-            // TO BOX
+            // To box
             VStack {
                 HStack {
-                    // Left-aligned Picker using Pill Style
                     Menu {
                         ForEach(FrameRate.allCases) { rate in
                             Button(rate.id) { convDestRate = rate }
@@ -442,7 +445,7 @@ extension ContentView {
                     .font(.system(size: 50, weight: .bold, design: .monospaced))
                     .foregroundColor(.green)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.5) // Prevents truncation
+                    .minimumScaleFactor(0.5)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .padding()
@@ -620,6 +623,7 @@ extension ContentView {
     }
     
     func getFormattedConvInput() -> String {
+        if isFramesMode { return convInputString.isEmpty ? "0" : convInputString }
         if convInputString.isEmpty { return formatInput("", fps: convSourceRate) }
         return formatInput(convInputString, fps: convSourceRate)
     }
@@ -658,38 +662,56 @@ extension ContentView {
     }
     
     func toggleDisplayMode() {
-        if !inputString.isEmpty {
-            if !isFramesMode {
-                let frames = TimecodeCalculator.inputToFrames(input: inputString, fps: selectedFrameRate)
-                inputString = "\(frames)"
-            } else {
-                if let frameCount = Int(inputString) {
-                    let tc = TimecodeCalculator.framesToString(totalFrames: frameCount, fps: selectedFrameRate)
-                    let raw = tc.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
-                    inputString = raw
-                    if let val = Int(raw) { inputString = "\(val)" }
+        if mode == .calculator {
+            if !inputString.isEmpty {
+                if !isFramesMode {
+                    let frames = TimecodeCalculator.inputToFrames(input: inputString, fps: selectedFrameRate)
+                    inputString = "\(frames)"
+                } else {
+                    if let frameCount = Int(inputString) {
+                        let tc = TimecodeCalculator.framesToString(totalFrames: frameCount, fps: selectedFrameRate)
+                        let raw = tc.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
+                        inputString = raw
+                        if let val = Int(raw) { inputString = "\(val)" }
+                    }
+                }
+            }
+            // Ticker Tape for Calc history
+            var newTape: [String] = []
+            for line in tickerTape {
+                if line.count <= 1 && !line.first!.isNumber { newTape.append(line); continue }
+                let clean = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
+                if !isFramesMode { // Switching TO Frames
+                    let rawInput = clean.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
+                    if line.contains(":") || line.contains(";") {
+                        let frames = TimecodeCalculator.inputToFrames(input: rawInput, fps: selectedFrameRate)
+                        newTape.append(line.replacingOccurrences(of: clean, with: "\(frames)"))
+                    } else { newTape.append(line) }
+                } else { // Switching TO TC
+                    if let frames = Int(clean) {
+                        let tc = TimecodeCalculator.framesToString(totalFrames: frames, fps: selectedFrameRate)
+                        newTape.append(line.replacingOccurrences(of: clean, with: tc))
+                    } else { newTape.append(line) }
+                }
+            }
+            tickerTape = newTape
+            
+        } else if mode == .converter {
+            if !convInputString.isEmpty {
+                if !isFramesMode { // TC -> Frames
+                    let f = TimecodeCalculator.inputToFrames(input: convInputString, fps: convSourceRate)
+                    convInputString = "\(f)"
+                } else { // Frames -> TC
+                    if let f = Int(convInputString) {
+                        let tc = TimecodeCalculator.framesToString(totalFrames: f, fps: convSourceRate)
+                        let raw = tc.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
+                        convInputString = raw
+                        if let val = Int(raw) { convInputString = "\(val)" }
+                    }
                 }
             }
         }
         isFramesMode.toggle()
-        var newTape: [String] = []
-        for line in tickerTape {
-            if line.count <= 1 && !line.first!.isNumber { newTape.append(line); continue }
-            let clean = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
-            if isFramesMode {
-                let rawInput = clean.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
-                if line.contains(":") || line.contains(";") {
-                    let frames = TimecodeCalculator.inputToFrames(input: rawInput, fps: selectedFrameRate)
-                    newTape.append(line.replacingOccurrences(of: clean, with: "\(frames)"))
-                } else { newTape.append(line) }
-            } else {
-                if let frames = Int(clean) {
-                    let tc = TimecodeCalculator.framesToString(totalFrames: frames, fps: selectedFrameRate)
-                    newTape.append(line.replacingOccurrences(of: clean, with: tc))
-                } else { newTape.append(line) }
-            }
-        }
-        tickerTape = newTape
     }
     
     func addDigit(_ digit: String) {
@@ -704,7 +726,7 @@ extension ContentView {
             if activeTrtField == .inPoint { if trtInString.count < limit { trtInString += digit } }
             else { if trtOutString.count < limit { trtOutString += digit } }
         } else if mode == .converter {
-            let limit = 6 + convSourceRate.frameDigits
+            let limit = isFramesMode ? 12 : (6 + convSourceRate.frameDigits)
             if convInputString.count < limit { convInputString += digit }
         }
     }
@@ -739,8 +761,8 @@ extension ContentView {
         lastWasEquals = false
         let currentFrames = isFramesMode ? (Int(inputString) ?? 0) : TimecodeCalculator.inputToFrames(input: inputString, fps: selectedFrameRate)
         let safeDisplay = getFormattedActiveDisplay()
-        if accumulatedFrames == 0 && pendingOperation == .none { accumulatedFrames = currentFrames; tickerTape.append("  " + safeDisplay) }
-        else if !inputString.isEmpty { tickerTape.append("  " + safeDisplay); performMath(newInput: currentFrames) }
+        if accumulatedFrames == 0 && pendingOperation == .none { accumulatedFrames = currentFrames; tickerTape.append("  " + safeDisplay) }
+        else if !inputString.isEmpty { tickerTape.append("  " + safeDisplay); performMath(newInput: currentFrames) }
         pendingOperation = op
         let symbol = switch op { case .add: "+"; case .subtract: "-"; case .multiply: "×"; case .divide: "÷"; default: "?" }
         tickerTape.append(symbol); inputString = ""
@@ -749,7 +771,7 @@ extension ContentView {
     func calculateResult() {
         guard !inputString.isEmpty || pendingOperation != .none else { return }
         let currentFrames = isFramesMode ? (Int(inputString) ?? 0) : TimecodeCalculator.inputToFrames(input: inputString, fps: selectedFrameRate)
-        if !inputString.isEmpty { tickerTape.append("  " + getFormattedActiveDisplay()) }
+        if !inputString.isEmpty { tickerTape.append("  " + getFormattedActiveDisplay()) }
         performMath(newInput: currentFrames)
         let resultStr = isFramesMode ? "\(accumulatedFrames)" : TimecodeCalculator.framesToString(totalFrames: accumulatedFrames, fps: selectedFrameRate)
         tickerTape.append("= " + resultStr)
@@ -771,11 +793,11 @@ extension ContentView {
         var newTape: [String] = []
         for line in tickerTape {
             if line.contains(":") || line.contains(";") {
-                let clean = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
+                let clean = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
                 let raw = clean.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
                 let f = TimecodeCalculator.inputToFrames(input: raw, fps: oldRate)
                 let s = TimecodeCalculator.framesToString(totalFrames: f, fps: newRate)
-                newTape.append(line.contains("=") ? "= " + s : "  " + s)
+                newTape.append(line.contains("=") ? "= " + s : "  " + s)
             } else { newTape.append(line) }
         }
         tickerTape = newTape
@@ -836,13 +858,15 @@ struct WelcomeView: View {
             ScrollView {
                 VStack(spacing: 30) {
                     Text("Welcome to PostCode").font(.largeTitle).bold().padding(.top, 40)
-                    Text("Created by Marty McLean").font(.title3)
+                    Text("Created by Marty McLean").font(.title3).bold().padding(.top, 0)
                     VStack(alignment: .leading, spacing: 20) {
-                        featureRow(icon: "plus.circle", title: "Calc Mode", desc: "Add, subtract, multiply, and divide timecodes.")
-                        featureRow(icon: "arrow.left.arrow.right", title: "TC / Fr Conversion", desc: "Instantly convert between timecode and frames.")
-                        featureRow(icon: "figure.run", title: "Run Mode", desc: "Calculate TRT for multiple segments.")
-                        featureRow(icon: "arrow.triangle.2.circlepath", title: "Cross Convert", desc: "Convert durations between frame rates.")
-                        featureRow(icon: "film.stack", title: "Frame Rates", desc: "Supports all SMPTE standards.")
+                        
+                        featureRow(icon: "plus.circle", title: "Calculator Mode", desc: "Add, subtract, multiply, and divide timecodes.")
+                        featureRow(icon: "figure.run", title: "Run Mode", desc: "Enter the In and Out points of multiple segments to calculate the total run time.")
+                        featureRow(icon: "arrow.up.arrow.down", title: "Converter Mode", desc: "Cross-convert a timecode between different frame rates.")
+                        featureRow(icon: "switch.2", title: "TC / Fr", desc: "Instantly toggle between timecode and frame count — perfect for VFX workflows.")
+                        featureRow(icon: "film.stack", title: "Frame Rates", desc: "Supports all SMPTE standard frame rates, as well as custom frame rates.")
+                        featureRow(icon: "square.and.arrow.up", title: "Share", desc: "All calculations and conversions can be saved as plain text.")
                     }.padding()
                 }
             }
