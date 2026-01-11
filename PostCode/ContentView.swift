@@ -101,7 +101,7 @@ struct ContentView: View {
         let h = Int(totalSeconds / 3600)
         let m = Int((totalSeconds.truncatingRemainder(dividingBy: 3600)) / 60)
         let s = totalSeconds.truncatingRemainder(dividingBy: 60)
-        return String(format: "Real: %dh %dm %.1fs", h, m, s)
+        return String(format: "Real Time: %dh %dm %.1fs", h, m, s)
     }
     
     var convResultString: String {
@@ -513,7 +513,7 @@ extension ContentView {
             HStack(spacing: buttonSpacing) {
                 CalcButton(label: "0", color: colorDarkGray, customSize: calcBtnSize) { addDigit("0") }
                 CalcButton(label: "00", color: colorDarkGray, customSize: calcBtnSize) { addDigit("00") }
-                CalcButton(label: "Backspace", systemImage: "delete.left", color: colorLightGray, textColor: .black, customSize: calcBtnSize) { backspace() }
+                CalcButton(label: "Backspace", systemImage: "delete.left", color: colorLightGray, textColor: .white, customSize: calcBtnSize) { backspace() }
                 if mode == .calculator {
                     CalcButton(label: "Plus", systemImage: "plus", color: colorOrange, customSize: calcBtnSize) { setOperation(.add) }
                 } else { Spacer().frame(width: calcBtnSize) }

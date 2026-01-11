@@ -1,15 +1,15 @@
 import Foundation
 
-// MARK: - Frame Rate Definitions
+// MARK: - FRAME RATE DEFINITIONS
 struct FrameRate: Hashable, Identifiable, RawRepresentable, Codable {
     
-    let id: String          // Display Name
-    let baseFPS: Int        // Math base
+    let id: String          // Display name
+    let baseFPS: Int        // Maths base
     let isDropFrame: Bool
     let rateMultiplier: Double
     
     // UI Helpers
-    // Only used for the last separator (between Seconds and Frames)
+    // Only used for the last separator between Seconds and Frames
     var separator: String { isDropFrame ? ";" : ":" }
     
     var frameDigits: Int {
@@ -40,7 +40,7 @@ struct FrameRate: Hashable, Identifiable, RawRepresentable, Codable {
         self.rateMultiplier = rateMultiplier
     }
     
-// MARK: - Presets
+// MARK: - FPS PRESETS
     static let fps23976   = FrameRate(id: "23.976", baseFPS: 24, rateMultiplier: 1.001)
     static let fps24      = FrameRate(id: "24", baseFPS: 24)
     static let fps25      = FrameRate(id: "25", baseFPS: 25)
@@ -59,7 +59,7 @@ struct FrameRate: Hashable, Identifiable, RawRepresentable, Codable {
     ]
 }
 
-// MARK: - Calculation Logic
+// MARK: - CALCULATION LOGIC
 struct TimecodeCalculator {
     
     // Frames to String
@@ -68,8 +68,7 @@ struct TimecodeCalculator {
         let base = fps.baseFPS
         guard base > 0 else { return "00:00:00:00" }
         
-        // FIX #1: Improved Drop Frame Algorithm
-        // Handles the "Minute 0 exception" correctly (no skip at min 0, 10, 20...)
+        // Improved Drop Frame Algorithm
         if fps.isDropFrame {
             let framesPer10Min = 17982
             let D = frames / framesPer10Min
@@ -91,7 +90,7 @@ struct TimecodeCalculator {
         
         let frameFormat = fps.frameDigits == 3 ? "%03d" : "%02d"
         
-        // FIX #2: Correct Separators
+        // Correct Separators
         // Hardcode ":" for H:M:S, and only use the dynamic separator for S;F
         let formatString = "%02d:%02d:%02d%@\(frameFormat)"
         
