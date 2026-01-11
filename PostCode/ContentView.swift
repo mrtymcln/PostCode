@@ -8,6 +8,7 @@ enum Operation {
 enum AppMode {
     case calculator
     case trt
+    case converter
 }
 
 enum TrtField {
@@ -55,6 +56,11 @@ struct ContentView: View {
     @State private var trtOutString = ""
     @State private var activeTrtField: TrtField = .inPoint
     
+// MARK: - CONVERTER STATE
+    @State private var convInputString = ""
+    @State private var convSourceRate: FrameRate = .fps25
+    @State private var convDestRate: FrameRate = .fps25
+    
 // MARK: - CONSTANTS
     private let buttonSpacing: CGFloat = 16
     private let colorDarkGray = Color(red: 0.2, green: 0.2, blue: 0.2)
@@ -66,9 +72,10 @@ struct ContentView: View {
     
 // MARK: - COMPUTED PROPERTIES
     var exportText: String {
-        if mode == .calculator {
+        switch mode {
+        case .calculator:
             return tickerTape.joined(separator: "\n")
-        } else {
+        case .trt:
             var text = "Total Running Time (@ \(selectedFrameRate.id))\n"
             text += "---------------------------\n"
             for (index, entry) in batchList.enumerated() {
@@ -76,10 +83,9 @@ struct ContentView: View {
             }
             text += "---------------------------\n"
             text += "TRT: \(trtTotalString)"
-            if let rt = trtRealTimeString {
-                text += "\n(\(rt))"
-            }
             return text
+        case .converter:
+            return "Convert: \(getFormattedConvInput()) @ \(convSourceRate.id) -> \(convResultString) @ \(convDestRate.id)"
         }
     }
     
@@ -96,6 +102,30 @@ struct ContentView: View {
         let m = Int((totalSeconds.truncatingRemainder(dividingBy: 3600)) / 60)
         let s = totalSeconds.truncatingRemainder(dividingBy: 60)
         return String(format: "Real: %dh %dm %.1fs", h, m, s)
+    }
+    
+    // FIX: Improved maths for Converter Mode
+    var convResultString: String {
+        // 1. Direct Pass-through (Fixes the 25->25 drift issue)
+        if convSourceRate == convDestRate {
+            return getFormattedConvInput()
+        }
+        
+        // 2. Calculate Source Frames
+        let srcFrames = Double(TimecodeCalculator.inputToFrames(input: convInputString, fps: convSourceRate))
+        
+        // 3. High Precision Conversion
+        // Formula: DstFrames = SrcFrames * (SrcMult / SrcBase) * (DstBase / DstMult)
+        // This bypasses the "Real Seconds" calculation to avoid intermediate rounding errors
+        
+        let srcBase = Double(convSourceRate.baseFPS)
+        let srcMult = convSourceRate.rateMultiplier
+        let dstBase = Double(convDestRate.baseFPS)
+        let dstMult = convDestRate.rateMultiplier
+        
+        let exactFrames = srcFrames * (srcMult / srcBase) * (dstBase / dstMult)
+        
+        return TimecodeCalculator.framesToString(totalFrames: Int(round(exactFrames)), fps: convDestRate)
     }
 
 // MARK: - BODY
@@ -128,7 +158,6 @@ struct ContentView: View {
                     }
                 } message: { Text("") }
             }
-
             .sheet(isPresented: $showWelcomeSheet, onDismiss: {
                 if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
                     lastRunVersion = currentVersion
@@ -145,7 +174,6 @@ struct ContentView: View {
             handleHardwareKey(press)
         }
         .task {
-            // Force focus after a short delay to ensure iPad catches it
             try? await Task.sleep(nanoseconds: 500_000_000)
             isViewFocused = true
             oldFrameRate = selectedFrameRate
@@ -163,8 +191,10 @@ extension ContentView {
             ZStack {
                 if mode == .calculator {
                     tickerTapeView.padding(.top, 20)
-                } else {
+                } else if mode == .trt {
                     trtListView.padding(.top, 20)
+                } else {
+                    converterDisplayView.padding(.top, 20)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -205,8 +235,10 @@ extension ContentView {
             ZStack {
                 if mode == .calculator {
                     tickerTapeView
-                } else {
+                } else if mode == .trt {
                     trtListView
+                } else {
+                    converterDisplayView
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -227,6 +259,9 @@ extension ContentView {
     // HEADER
     private var headerView: some View {
         HStack(spacing: 8) {
+            
+            // FPS MENU
+            // NOTE: We render this even in converter mode (invisible) to hold layout space
             Menu {
                 ForEach(FrameRate.allCases) { rate in
                     Button(action: { changeFrameRate(to: rate) }) {
@@ -243,10 +278,14 @@ extension ContentView {
             } label: {
                 pillLabel(text: selectedFrameRate.id, icon: "chevron.up.chevron.down")
             }
+            // Hides it visually but keeps the layout footprint
+            .opacity(mode == .converter ? 0 : 1)
+            .disabled(mode == .converter)
             
+            // 3-WAY TOGGLE BUTTON
             Button(action: { withAnimation { toggleAppMode() } }) {
-                pillLabel(text: mode == .calculator ? "Calc" : "Run",
-                          icon: mode == .calculator ? "plus.circle" : "figure.run",
+                pillLabel(text: getModeLabel(),
+                          icon: getModeIcon(),
                           color: Color(UIColor.systemGray5))
             }
             
@@ -278,7 +317,7 @@ extension ContentView {
         }
     }
     
-    // TICKER TAPE IN CALCULATOR MODE
+    // CALC DISPLAY
     private var tickerTapeView: some View {
         ScrollView {
             ScrollViewReader { proxy in
@@ -309,7 +348,7 @@ extension ContentView {
         .padding(.bottom, 10)
     }
     
-    // TICKER TAPE IN TRT MODE
+    // TRT LIST
     private var trtListView: some View {
         VStack(spacing: 0) {
             HStack {
@@ -355,7 +394,67 @@ extension ContentView {
         }
     }
     
-    // TRT MODE INPUTS
+    // NEW: CONVERTER DISPLAY
+    private var converterDisplayView: some View {
+        VStack(spacing: 20) {
+            // FROM BOX
+            VStack {
+                HStack {
+                    // Left-aligned Picker using Pill Style
+                    Menu {
+                        ForEach(FrameRate.allCases) { rate in
+                            Button(rate.id) { convSourceRate = rate }
+                        }
+                    } label: {
+                        pillLabel(text: convSourceRate.id, icon: "chevron.up.chevron.down")
+                    }
+                    Spacer()
+                    Text("FROM:").font(.caption).fontWeight(.bold).foregroundColor(.gray)
+                }
+                
+                Text(getFormattedConvInput())
+                    .font(.system(size: 50, weight: .bold, design: .monospaced))
+                    .foregroundColor(.orange)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5) // Prevents truncation
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .padding()
+            .background(colorDarkGray)
+            .cornerRadius(12)
+            
+            // TO BOX
+            VStack {
+                HStack {
+                    // Left-aligned Picker using Pill Style
+                    Menu {
+                        ForEach(FrameRate.allCases) { rate in
+                            Button(rate.id) { convDestRate = rate }
+                        }
+                    } label: {
+                        pillLabel(text: convDestRate.id, icon: "chevron.up.chevron.down")
+                    }
+                    Spacer()
+                    Text("TO:").font(.caption).fontWeight(.bold).foregroundColor(.gray)
+                }
+                
+                Text(convResultString)
+                    .font(.system(size: 50, weight: .bold, design: .monospaced))
+                    .foregroundColor(.green)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5) // Prevents truncation
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .padding()
+            .background(colorDarkGray)
+            .cornerRadius(12)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+    }
+    
+    // TRT INPUTS
     private var trtInputArea: some View {
         HStack(spacing: 12) {
             inputField(label: "IN:", value: formatInput(trtInString), isActive: activeTrtField == .inPoint)
@@ -437,41 +536,35 @@ extension ContentView {
         let char = press.characters
         
         if mode == .calculator {
-            // OPERATION SHORTCUTS
-            // Shift+Equals and Shift+8
+            // 1. OPERATION SHORTCUTS
             if char == "+" || (char == "=" && press.modifiers.contains(.shift)) {
                 setOperation(.add); return .handled
             }
             if char == "*" || char == "x" || (char == "8" && press.modifiers.contains(.shift)) {
                 setOperation(.multiply); return .handled
             }
-            
-            // Standard Operations
             if char == "-" { setOperation(.subtract); return .handled }
             if char == "/" { setOperation(.divide); return .handled }
             if char == "=" { calculateResult(); return .handled }
-            
-            // Clear
+            if char == "c" || char == "C" { clearAll(); return .handled }
+        } else if mode == .converter {
             if char == "c" || char == "C" { clearAll(); return .handled }
         }
         
-        // NUMBERS
-        // Guard against Shift being held (so Shift+8 doesn't double-trigger '8' and '*')
+        // 2. NUMBERS
         if "0123456789".contains(char) && !press.modifiers.contains(.shift) {
             addDigit(char)
             return .handled
         }
         
-        // DELETE
         if press.key == .delete { backspace(); return .handled }
         
-        // ENTER AND RETURN
         if press.key == .return || char == "\r" || char == "\n" || char == "\u{3}" {
-            if mode == .calculator { calculateResult() } else { addBatchEntry() }
+            if mode == .calculator { calculateResult() }
+            else if mode == .trt { addBatchEntry() }
             return .handled
         }
         
-        // 5. TAB FOR TRT MODE
         if press.key == .tab && mode == .trt {
             activeTrtField = (activeTrtField == .inPoint) ? .outPoint : .inPoint
             return .handled
@@ -510,6 +603,27 @@ extension ContentView {
     }
     
 // MARK: - LOGIC
+    func getModeLabel() -> String {
+        switch mode {
+        case .calculator: return "Calc"
+        case .trt: return "Run"
+        case .converter: return "Conv"
+        }
+    }
+    
+    func getModeIcon() -> String {
+        switch mode {
+        case .calculator: return "plus.circle"
+        case .trt: return "figure.run"
+        case .converter: return "arrow.up.arrow.down"
+        }
+    }
+    
+    func getFormattedConvInput() -> String {
+        if convInputString.isEmpty { return formatInput("", fps: convSourceRate) }
+        return formatInput(convInputString, fps: convSourceRate)
+    }
+    
     func checkForUpdate() {
         if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
             if currentVersion != lastRunVersion { showWelcomeSheet = true }
@@ -524,10 +638,11 @@ extension ContentView {
     }
     
     func toggleAppMode() {
-        inputString = ""
-        trtInString = ""
-        trtOutString = ""
-        mode = (mode == .calculator) ? .trt : .calculator
+        switch mode {
+        case .calculator: mode = .trt
+        case .trt: mode = .converter
+        case .converter: mode = .calculator
+        }
     }
     
     func addBatchEntry() {
@@ -560,7 +675,7 @@ extension ContentView {
         var newTape: [String] = []
         for line in tickerTape {
             if line.count <= 1 && !line.first!.isNumber { newTape.append(line); continue }
-            let clean = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
+            let clean = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
             if isFramesMode {
                 let rawInput = clean.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
                 if line.contains(":") || line.contains(";") {
@@ -584,24 +699,35 @@ extension ContentView {
             }
             let limit = isFramesMode ? 12 : (6 + selectedFrameRate.frameDigits)
             if inputString.count < limit { inputString += digit }
-        } else {
+        } else if mode == .trt {
             let limit = 6 + selectedFrameRate.frameDigits
             if activeTrtField == .inPoint { if trtInString.count < limit { trtInString += digit } }
             else { if trtOutString.count < limit { trtOutString += digit } }
+        } else if mode == .converter {
+            let limit = 6 + convSourceRate.frameDigits
+            if convInputString.count < limit { convInputString += digit }
         }
     }
     
     func backspace() {
-        if mode == .calculator { if !inputString.isEmpty { inputString.removeLast() } }
-        else {
+        if mode == .calculator {
+            if !inputString.isEmpty { inputString.removeLast() }
+        } else if mode == .trt {
             if activeTrtField == .inPoint { if !trtInString.isEmpty { trtInString.removeLast() } }
             else { if !trtOutString.isEmpty { trtOutString.removeLast() } }
+        } else if mode == .converter {
+            if !convInputString.isEmpty { convInputString.removeLast() }
         }
     }
     
     func clearAll() {
-        if mode == .calculator { inputString = ""; tickerTape = []; accumulatedFrames = 0; pendingOperation = .none; lastWasEquals = false }
-        else { batchList.removeAll(); trtInString = ""; trtOutString = "" }
+        if mode == .calculator {
+            inputString = ""; tickerTape = []; accumulatedFrames = 0; pendingOperation = .none; lastWasEquals = false
+        } else if mode == .trt {
+            batchList.removeAll(); trtInString = ""; trtOutString = ""
+        } else if mode == .converter {
+            convInputString = ""
+        }
     }
     
     func getFormattedActiveDisplay() -> String {
@@ -613,8 +739,8 @@ extension ContentView {
         lastWasEquals = false
         let currentFrames = isFramesMode ? (Int(inputString) ?? 0) : TimecodeCalculator.inputToFrames(input: inputString, fps: selectedFrameRate)
         let safeDisplay = getFormattedActiveDisplay()
-        if accumulatedFrames == 0 && pendingOperation == .none { accumulatedFrames = currentFrames; tickerTape.append("  " + safeDisplay) }
-        else if !inputString.isEmpty { tickerTape.append("  " + safeDisplay); performMath(newInput: currentFrames) }
+        if accumulatedFrames == 0 && pendingOperation == .none { accumulatedFrames = currentFrames; tickerTape.append("  " + safeDisplay) }
+        else if !inputString.isEmpty { tickerTape.append("  " + safeDisplay); performMath(newInput: currentFrames) }
         pendingOperation = op
         let symbol = switch op { case .add: "+"; case .subtract: "-"; case .multiply: "×"; case .divide: "÷"; default: "?" }
         tickerTape.append(symbol); inputString = ""
@@ -623,7 +749,7 @@ extension ContentView {
     func calculateResult() {
         guard !inputString.isEmpty || pendingOperation != .none else { return }
         let currentFrames = isFramesMode ? (Int(inputString) ?? 0) : TimecodeCalculator.inputToFrames(input: inputString, fps: selectedFrameRate)
-        if !inputString.isEmpty { tickerTape.append("  " + getFormattedActiveDisplay()) }
+        if !inputString.isEmpty { tickerTape.append("  " + getFormattedActiveDisplay()) }
         performMath(newInput: currentFrames)
         let resultStr = isFramesMode ? "\(accumulatedFrames)" : TimecodeCalculator.framesToString(totalFrames: accumulatedFrames, fps: selectedFrameRate)
         tickerTape.append("= " + resultStr)
@@ -645,11 +771,11 @@ extension ContentView {
         var newTape: [String] = []
         for line in tickerTape {
             if line.contains(":") || line.contains(";") {
-                let clean = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
+                let clean = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
                 let raw = clean.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
                 let f = TimecodeCalculator.inputToFrames(input: raw, fps: oldRate)
                 let s = TimecodeCalculator.framesToString(totalFrames: f, fps: newRate)
-                newTape.append(line.contains("=") ? "= " + s : "  " + s)
+                newTape.append(line.contains("=") ? "= " + s : "  " + s)
             } else { newTape.append(line) }
         }
         tickerTape = newTape
@@ -657,12 +783,13 @@ extension ContentView {
     
     func convertTrtHistory(from oldRate: FrameRate, to newRate: FrameRate) { }
     
-    func formatInput(_ raw: String) -> String {
-        let fDigits = selectedFrameRate.frameDigits
+    func formatInput(_ raw: String, fps: FrameRate? = nil) -> String {
+        let useFps = fps ?? selectedFrameRate
+        let fDigits = useFps.frameDigits
         let totalLen = 6 + fDigits
         let padded = String(repeating: "0", count: max(0, totalLen - raw.count)) + raw
         let digits = Array(padded)
-        let sep = selectedFrameRate.isDropFrame ? ";" : ":"
+        let sep = useFps.isDropFrame ? ";" : ":"
         var text = "\(digits[0])\(digits[1])\(sep)\(digits[2])\(digits[3])\(sep)\(digits[4])\(digits[5])\(sep)"
         if (6 + fDigits - 1) < digits.count { text += String(digits[6...(6 + fDigits - 1)]) }
         return text
@@ -679,7 +806,7 @@ struct CalcButton: View {
     let action: () -> Void
     private var size: CGFloat {
         if let custom = customSize { return custom }
-        // FIX to ensure screen width is valid to avoid "Invalid frame dimension" crash
+        // FIX: Ensure screen width is valid to avoid "Invalid frame dimension" crash
         let screenW = UIScreen.main.bounds.width
         return screenW > 0 ? (screenW - (5 * 16)) / 4 : 70
     }
@@ -697,7 +824,6 @@ struct CalcButton: View {
                     Text(label).font(.system(size: 40, weight: .medium, design: .rounded)).foregroundColor(textColor)
                 }
             }
-            // If customSize is nil, let the parent container size the button via frame
             .frame(width: size, height: size)
         }
     }
@@ -715,8 +841,8 @@ struct WelcomeView: View {
                         featureRow(icon: "plus.circle", title: "Calc Mode", desc: "Add, subtract, multiply, and divide timecodes.")
                         featureRow(icon: "arrow.left.arrow.right", title: "TC / Fr Conversion", desc: "Instantly convert between timecode and frames.")
                         featureRow(icon: "figure.run", title: "Run Mode", desc: "Calculate TRT for multiple segments.")
+                        featureRow(icon: "arrow.triangle.2.circlepath", title: "Cross Convert", desc: "Convert durations between frame rates.")
                         featureRow(icon: "film.stack", title: "Frame Rates", desc: "Supports all SMPTE standards.")
-                        featureRow(icon: "square.and.arrow.up", title: "Share", desc: "Export calculations as text.")
                     }.padding()
                 }
             }

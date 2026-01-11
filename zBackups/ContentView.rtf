@@ -35,6 +35,9 @@
     
 \f0\b \cf2 case
 \f1\b0 \cf4  \cf8 trt\cf4 \
+    
+\f0\b \cf2 case
+\f1\b0 \cf4  \cf8 converter\cf4 \
 \}\
 \
 
@@ -203,6 +206,25 @@
 \f1\b0 \cf4  \cf8 activeTrtField\cf4 : \cf11 TrtField\cf4  = .\cf12 inPoint\cf4 \
     \
 \cf5 // 
+\f0\b \cf6 MARK: - CONVERTER STATE
+\f1\b0 \cf4 \
+    \cf9 @State\cf4  
+\f0\b \cf2 private
+\f1\b0 \cf4  
+\f0\b \cf2 var
+\f1\b0 \cf4  \cf8 convInputString\cf4  = \cf10 ""\cf4 \
+    \cf9 @State\cf4  
+\f0\b \cf2 private
+\f1\b0 \cf4  
+\f0\b \cf2 var
+\f1\b0 \cf4  \cf8 convSourceRate\cf4 : \cf11 FrameRate\cf4  = .\cf12 fps25\cf4 \
+    \cf9 @State\cf4  
+\f0\b \cf2 private
+\f1\b0 \cf4  
+\f0\b \cf2 var
+\f1\b0 \cf4  \cf8 convDestRate\cf4 : \cf11 FrameRate\cf4  = .\cf12 fps25\cf4 \
+    \
+\cf5 // 
 \f0\b \cf6 MARK: - CONSTANTS
 \f1\b0 \cf4 \
     
@@ -248,14 +270,17 @@
 \f0\b \cf2 var
 \f1\b0 \cf4  \cf8 exportText\cf4 : \cf9 String\cf4  \{\
         
-\f0\b \cf2 if
-\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 calculator\cf4  \{\
+\f0\b \cf2 switch
+\f1\b0 \cf4  \cf12 mode\cf4  \{\
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 calculator\cf4 :\
             
 \f0\b \cf2 return
 \f1\b0 \cf4  \cf12 tickerTape\cf4 .\cf14 joined\cf4 (\cf14 separator\cf4 : \cf10 "\\n"\cf4 )\
-        \} 
-\f0\b \cf2 else
-\f1\b0 \cf4  \{\
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 trt\cf4 :\
             
 \f0\b \cf2 var
 \f1\b0 \cf4  text = \cf10 "Total Running Time (@ \cf4 \\(\cf12 selectedFrameRate\cf4 .\cf12 id\cf4 )\cf10 )\\n"\cf4 \
@@ -270,15 +295,14 @@
             text += \cf10 "---------------------------\\n"\cf4 \
             text += \cf10 "TRT: \cf4 \\(\cf12 trtTotalString\cf4 )\cf10 "\cf4 \
             
-\f0\b \cf2 if
-\f1\b0 \cf4  
-\f0\b \cf2 let
-\f1\b0 \cf4  rt = \cf12 trtRealTimeString\cf4  \{\
-                text += \cf10 "\\n(\cf4 \\(rt)\cf10 )"\cf4 \
-            \}\
-            
 \f0\b \cf2 return
 \f1\b0 \cf4  text\
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 converter\cf4 :\
+            
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf10 "Convert: \cf4 \\(\cf12 getFormattedConvInput\cf4 ())\cf10  @ \cf4 \\(\cf12 convSourceRate\cf4 .\cf12 id\cf4 )\cf10  -> \cf4 \\(\cf12 convResultString\cf4 )\cf10  @ \cf4 \\(\cf12 convDestRate\cf4 .\cf12 id\cf4 )\cf10 "\cf4 \
         \}\
     \}\
     \
@@ -323,6 +347,50 @@
         
 \f0\b \cf2 return
 \f1\b0 \cf4  \cf9 String\cf4 (\cf9 format\cf4 : \cf10 "Real: %dh %dm %.1fs"\cf4 , h, m, s)\
+    \}\
+    \
+    \cf5 // FIX: Improved maths for Converter Mode\cf4 \
+    
+\f0\b \cf2 var
+\f1\b0 \cf4  \cf8 convResultString\cf4 : \cf9 String\cf4  \{\
+        \cf5 // 1. Direct Pass-through (Fixes the 25->25 drift issue)\cf4 \
+        
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 convSourceRate\cf4  == \cf12 convDestRate\cf4  \{\
+            
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf12 getFormattedConvInput\cf4 ()\
+        \}\
+        \
+        \cf5 // 2. Calculate Source Frames\cf4 \
+        
+\f0\b \cf2 let
+\f1\b0 \cf4  srcFrames = \cf9 Double\cf4 (\cf11 TimecodeCalculator\cf4 .\cf12 inputToFrames\cf4 (\cf12 input\cf4 : \cf12 convInputString\cf4 , \cf12 fps\cf4 : \cf12 convSourceRate\cf4 ))\
+        \
+        \cf5 // 3. High Precision Conversion\cf4 \
+        \cf5 // Formula: DstFrames = SrcFrames * (SrcMult / SrcBase) * (DstBase / DstMult)\cf4 \
+        \cf5 // This bypasses the "Real Seconds" calculation to avoid intermediate rounding errors\cf4 \
+        \
+        
+\f0\b \cf2 let
+\f1\b0 \cf4  srcBase = \cf9 Double\cf4 (\cf12 convSourceRate\cf4 .\cf12 baseFPS\cf4 )\
+        
+\f0\b \cf2 let
+\f1\b0 \cf4  srcMult = \cf12 convSourceRate\cf4 .\cf12 rateMultiplier\cf4 \
+        
+\f0\b \cf2 let
+\f1\b0 \cf4  dstBase = \cf9 Double\cf4 (\cf12 convDestRate\cf4 .\cf12 baseFPS\cf4 )\
+        
+\f0\b \cf2 let
+\f1\b0 \cf4  dstMult = \cf12 convDestRate\cf4 .\cf12 rateMultiplier\cf4 \
+        \
+        
+\f0\b \cf2 let
+\f1\b0 \cf4  exactFrames = srcFrames * (srcMult / srcBase) * (dstBase / dstMult)\
+        \
+        
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf11 TimecodeCalculator\cf4 .\cf12 framesToString\cf4 (\cf12 totalFrames\cf4 : \cf9 Int\cf4 (\cf14 round\cf4 (exactFrames)), \cf12 fps\cf4 : \cf12 convDestRate\cf4 )\
     \}\
 \
 \cf5 // 
@@ -375,7 +443,6 @@
                     \}\
                 \} \cf14 message\cf4 : \{ \cf9 Text\cf4 (\cf10 ""\cf4 ) \}\
             \}\
-\
             .\cf14 sheet\cf4 (\cf14 isPresented\cf4 : \cf12 $showWelcomeSheet\cf4 , \cf14 onDismiss\cf4 : \{\
                 
 \f0\b \cf2 if
@@ -400,7 +467,6 @@
             \cf12 handleHardwareKey\cf4 (press)\
         \}\
         .\cf14 task\cf4  \{\
-            \cf5 // Force focus after a short delay to ensure iPad catches it\cf4 \
             
 \f0\b \cf2 try
 \f1\b0 \cf4 ? 
@@ -438,8 +504,14 @@
                     \cf12 tickerTapeView\cf4 .\cf14 padding\cf4 (.\cf14 top\cf4 , \cf13 20\cf4 )\
                 \} 
 \f0\b \cf2 else
-\f1\b0 \cf4  \{\
+\f1\b0 \cf4  
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 trt\cf4  \{\
                     \cf12 trtListView\cf4 .\cf14 padding\cf4 (.\cf14 top\cf4 , \cf13 20\cf4 )\
+                \} 
+\f0\b \cf2 else
+\f1\b0 \cf4  \{\
+                    \cf12 converterDisplayView\cf4 .\cf14 padding\cf4 (.\cf14 top\cf4 , \cf13 20\cf4 )\
                 \}\
             \}\
             .\cf14 frame\cf4 (\cf14 maxWidth\cf4 : .\cf14 infinity\cf4 , \cf14 maxHeight\cf4 : .\cf14 infinity\cf4 )\
@@ -494,8 +566,14 @@
                     \cf12 tickerTapeView\cf4 \
                 \} 
 \f0\b \cf2 else
-\f1\b0 \cf4  \{\
+\f1\b0 \cf4  
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 trt\cf4  \{\
                     \cf12 trtListView\cf4 \
+                \} 
+\f0\b \cf2 else
+\f1\b0 \cf4  \{\
+                    \cf12 converterDisplayView\cf4 \
                 \}\
             \}\
             .\cf14 frame\cf4 (\cf14 maxWidth\cf4 : .\cf14 infinity\cf4 , \cf14 maxHeight\cf4 : .\cf14 infinity\cf4 )\
@@ -526,6 +604,9 @@
 \f0\b \cf2 some
 \f1\b0 \cf4  \cf9 View\cf4  \{\
         \cf9 HStack\cf4 (\cf9 spacing\cf4 : \cf13 8\cf4 ) \{\
+            \
+            \cf5 // FPS MENU\cf4 \
+            \cf5 // NOTE: We render this even in converter mode (invisible) to hold layout space\cf4 \
             \cf9 Menu\cf4  \{\
                 \cf9 ForEach\cf4 (\cf11 FrameRate\cf4 .\cf12 allCases\cf4 ) \{ rate 
 \f0\b \cf2 in
@@ -552,10 +633,14 @@
             \} \cf14 label\cf4 : \{\
                 \cf12 pillLabel\cf4 (\cf12 text\cf4 : \cf12 selectedFrameRate\cf4 .\cf12 id\cf4 , \cf12 icon\cf4 : \cf10 "chevron.up.chevron.down"\cf4 )\
             \}\
+            \cf5 // Hides it visually but keeps the layout footprint\cf4 \
+            .\cf14 opacity\cf4 (\cf12 mode\cf4  == .\cf14 converter\cf4  ? \cf13 0\cf4  : \cf13 1\cf4 )\
+            .\cf14 disabled\cf4 (\cf12 mode\cf4  == .\cf14 converter\cf4 )\
             \
+            \cf5 // 3-WAY TOGGLE BUTTON\cf4 \
             \cf9 Button\cf4 (\cf9 action\cf4 : \{ \cf14 withAnimation\cf4  \{ \cf12 toggleAppMode\cf4 () \} \}) \{\
-                \cf12 pillLabel\cf4 (\cf12 text\cf4 : \cf12 mode\cf4  == .\cf12 calculator\cf4  ? \cf10 "Calc"\cf4  : \cf10 "Run"\cf4 ,\
-                          \cf12 icon\cf4 : \cf12 mode\cf4  == .\cf12 calculator\cf4  ? \cf10 "plus.circle"\cf4  : \cf10 "figure.run"\cf4 ,\
+                \cf12 pillLabel\cf4 (\cf12 text\cf4 : \cf12 getModeLabel\cf4 (),\
+                          \cf12 icon\cf4 : \cf12 getModeIcon\cf4 (),\
                           \cf12 color\cf4 : \cf9 Color\cf4 (\cf9 UIColor\cf4 .\cf14 systemGray5\cf4 ))\
             \}\
             \
@@ -591,7 +676,7 @@
         \}\
     \}\
     \
-    \cf5 // TICKER TAPE IN CALCULATOR MODE\cf4 \
+    \cf5 // CALC DISPLAY\cf4 \
     
 \f0\b \cf2 private
 \f1\b0 \cf4  
@@ -636,7 +721,7 @@
         .\cf14 padding\cf4 (.\cf14 bottom\cf4 , \cf13 10\cf4 )\
     \}\
     \
-    \cf5 // TICKER TAPE IN TRT MODE\cf4 \
+    \cf5 // TRT LIST\cf4 \
     
 \f0\b \cf2 private
 \f1\b0 \cf4  
@@ -696,7 +781,77 @@
         \}\
     \}\
     \
-    \cf5 // TRT MODE INPUTS\cf4 \
+    \cf5 // NEW: CONVERTER DISPLAY\cf4 \
+    
+\f0\b \cf2 private
+\f1\b0 \cf4  
+\f0\b \cf2 var
+\f1\b0 \cf4  \cf8 converterDisplayView\cf4 : 
+\f0\b \cf2 some
+\f1\b0 \cf4  \cf9 View\cf4  \{\
+        \cf9 VStack\cf4 (\cf9 spacing\cf4 : \cf13 20\cf4 ) \{\
+            \cf5 // FROM BOX\cf4 \
+            \cf9 VStack\cf4  \{\
+                \cf9 HStack\cf4  \{\
+                    \cf5 // Left-aligned Picker using Pill Style\cf4 \
+                    \cf9 Menu\cf4  \{\
+                        \cf9 ForEach\cf4 (\cf11 FrameRate\cf4 .\cf12 allCases\cf4 ) \{ rate 
+\f0\b \cf2 in
+\f1\b0 \cf4 \
+                            \cf9 Button\cf4 (rate.\cf14 id\cf4 ) \{ \cf12 convSourceRate\cf4  = rate \}\
+                        \}\
+                    \} \cf14 label\cf4 : \{\
+                        \cf12 pillLabel\cf4 (\cf12 text\cf4 : \cf12 convSourceRate\cf4 .\cf12 id\cf4 , \cf12 icon\cf4 : \cf10 "chevron.up.chevron.down"\cf4 )\
+                    \}\
+                    \cf9 Spacer\cf4 ()\
+                    \cf9 Text\cf4 (\cf10 "FROM:"\cf4 ).\cf14 font\cf4 (.\cf14 caption\cf4 ).\cf14 fontWeight\cf4 (.\cf14 bold\cf4 ).\cf14 foregroundColor\cf4 (.\cf14 gray\cf4 )\
+                \}\
+                \
+                \cf9 Text\cf4 (\cf12 getFormattedConvInput\cf4 ())\
+                    .\cf14 font\cf4 (.\cf14 system\cf4 (\cf14 size\cf4 : \cf13 50\cf4 , \cf14 weight\cf4 : .\cf14 bold\cf4 , \cf14 design\cf4 : .\cf14 monospaced\cf4 ))\
+                    .\cf14 foregroundColor\cf4 (.\cf14 orange\cf4 )\
+                    .\cf14 lineLimit\cf4 (\cf13 1\cf4 )\
+                    .\cf14 minimumScaleFactor\cf4 (\cf13 0.5\cf4 ) \cf5 // Prevents truncation\cf4 \
+                    .\cf14 frame\cf4 (\cf14 maxWidth\cf4 : .\cf14 infinity\cf4 , \cf14 alignment\cf4 : .\cf14 trailing\cf4 )\
+            \}\
+            .\cf14 padding\cf4 ()\
+            .\cf14 background\cf4 (\cf12 colorDarkGray\cf4 )\
+            .\cf14 cornerRadius\cf4 (\cf13 12\cf4 )\
+            \
+            \cf5 // TO BOX\cf4 \
+            \cf9 VStack\cf4  \{\
+                \cf9 HStack\cf4  \{\
+                    \cf5 // Left-aligned Picker using Pill Style\cf4 \
+                    \cf9 Menu\cf4  \{\
+                        \cf9 ForEach\cf4 (\cf11 FrameRate\cf4 .\cf12 allCases\cf4 ) \{ rate 
+\f0\b \cf2 in
+\f1\b0 \cf4 \
+                            \cf9 Button\cf4 (rate.\cf14 id\cf4 ) \{ \cf12 convDestRate\cf4  = rate \}\
+                        \}\
+                    \} \cf14 label\cf4 : \{\
+                        \cf12 pillLabel\cf4 (\cf12 text\cf4 : \cf12 convDestRate\cf4 .\cf12 id\cf4 , \cf12 icon\cf4 : \cf10 "chevron.up.chevron.down"\cf4 )\
+                    \}\
+                    \cf9 Spacer\cf4 ()\
+                    \cf9 Text\cf4 (\cf10 "TO:"\cf4 ).\cf14 font\cf4 (.\cf14 caption\cf4 ).\cf14 fontWeight\cf4 (.\cf14 bold\cf4 ).\cf14 foregroundColor\cf4 (.\cf14 gray\cf4 )\
+                \}\
+                \
+                \cf9 Text\cf4 (\cf12 convResultString\cf4 )\
+                    .\cf14 font\cf4 (.\cf14 system\cf4 (\cf14 size\cf4 : \cf13 50\cf4 , \cf14 weight\cf4 : .\cf14 bold\cf4 , \cf14 design\cf4 : .\cf14 monospaced\cf4 ))\
+                    .\cf14 foregroundColor\cf4 (.\cf14 green\cf4 )\
+                    .\cf14 lineLimit\cf4 (\cf13 1\cf4 )\
+                    .\cf14 minimumScaleFactor\cf4 (\cf13 0.5\cf4 ) \cf5 // Prevents truncation\cf4 \
+                    .\cf14 frame\cf4 (\cf14 maxWidth\cf4 : .\cf14 infinity\cf4 , \cf14 alignment\cf4 : .\cf14 trailing\cf4 )\
+            \}\
+            .\cf14 padding\cf4 ()\
+            .\cf14 background\cf4 (\cf12 colorDarkGray\cf4 )\
+            .\cf14 cornerRadius\cf4 (\cf13 12\cf4 )\
+            \
+            \cf9 Spacer\cf4 ()\
+        \}\
+        .\cf14 padding\cf4 (.\cf14 horizontal\cf4 , \cf13 16\cf4 )\
+    \}\
+    \
+    \cf5 // TRT INPUTS\cf4 \
     
 \f0\b \cf2 private
 \f1\b0 \cf4  
@@ -826,8 +981,7 @@
         
 \f0\b \cf2 if
 \f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 calculator\cf4  \{\
-            \cf5 // OPERATION SHORTCUTS\cf4 \
-            \cf5 // Shift+Equals and Shift+8\cf4 \
+            \cf5 // 1. OPERATION SHORTCUTS\cf4 \
             
 \f0\b \cf2 if
 \f1\b0 \cf4  char == \cf10 "+"\cf4  || (char == \cf10 "="\cf4  && press.\cf14 modifiers\cf4 .\cf14 contains\cf4 (.\cf14 shift\cf4 )) \{\
@@ -842,8 +996,6 @@
 \f0\b \cf2 return
 \f1\b0 \cf4  .\cf14 handled\cf4 \
             \}\
-            \
-            \cf5 // Standard Operations\cf4 \
             
 \f0\b \cf2 if
 \f1\b0 \cf4  char == \cf10 "-"\cf4  \{ \cf12 setOperation\cf4 (.\cf12 subtract\cf4 ); 
@@ -859,8 +1011,16 @@
 \f1\b0 \cf4  char == \cf10 "="\cf4  \{ \cf12 calculateResult\cf4 (); 
 \f0\b \cf2 return
 \f1\b0 \cf4  .\cf14 handled\cf4  \}\
-            \
-            \cf5 // Clear\cf4 \
+            
+\f0\b \cf2 if
+\f1\b0 \cf4  char == \cf10 "c"\cf4  || char == \cf10 "C"\cf4  \{ \cf12 clearAll\cf4 (); 
+\f0\b \cf2 return
+\f1\b0 \cf4  .\cf14 handled\cf4  \}\
+        \} 
+\f0\b \cf2 else
+\f1\b0 \cf4  
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 converter\cf4  \{\
             
 \f0\b \cf2 if
 \f1\b0 \cf4  char == \cf10 "c"\cf4  || char == \cf10 "C"\cf4  \{ \cf12 clearAll\cf4 (); 
@@ -868,8 +1028,7 @@
 \f1\b0 \cf4  .\cf14 handled\cf4  \}\
         \}\
         \
-        \cf5 // NUMBERS\cf4 \
-        \cf5 // Guard against Shift being held (so Shift+8 doesn't double-trigger '8' and '*')\cf4 \
+        \cf5 // 2. NUMBERS\cf4 \
         
 \f0\b \cf2 if
 \f1\b0 \cf4  \cf10 "0123456789"\cf4 .\cf14 contains\cf4 (char) && !press.\cf14 modifiers\cf4 .\cf14 contains\cf4 (.\cf14 shift\cf4 ) \{\
@@ -879,28 +1038,28 @@
 \f1\b0 \cf4  .\cf14 handled\cf4 \
         \}\
         \
-        \cf5 // DELETE\cf4 \
         
 \f0\b \cf2 if
 \f1\b0 \cf4  press.\cf14 key\cf4  == .\cf14 delete\cf4  \{ \cf12 backspace\cf4 (); 
 \f0\b \cf2 return
 \f1\b0 \cf4  .\cf14 handled\cf4  \}\
         \
-        \cf5 // ENTER AND RETURN\cf4 \
         
 \f0\b \cf2 if
 \f1\b0 \cf4  press.\cf14 key\cf4  == .\cf14 return\cf4  || char == \cf10 "\\r"\cf4  || char == \cf10 "\\n"\cf4  || char == \cf10 "\\u\{3\}"\cf4  \{\
             
 \f0\b \cf2 if
-\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 calculator\cf4  \{ \cf12 calculateResult\cf4 () \} 
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 calculator\cf4  \{ \cf12 calculateResult\cf4 () \}\
+            
 \f0\b \cf2 else
-\f1\b0 \cf4  \{ \cf12 addBatchEntry\cf4 () \}\
+\f1\b0 \cf4  
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 trt\cf4  \{ \cf12 addBatchEntry\cf4 () \}\
             
 \f0\b \cf2 return
 \f1\b0 \cf4  .\cf14 handled\cf4 \
         \}\
         \
-        \cf5 // 5. TAB FOR TRT MODE\cf4 \
         
 \f0\b \cf2 if
 \f1\b0 \cf4  press.\cf14 key\cf4  == .\cf14 tab\cf4  && \cf12 mode\cf4  == .\cf12 trt\cf4  \{\
@@ -971,6 +1130,67 @@
 \f1\b0 \cf4 \
     
 \f0\b \cf2 func
+\f1\b0 \cf4  \cf8 getModeLabel\cf4 () -> \cf9 String\cf4  \{\
+        
+\f0\b \cf2 switch
+\f1\b0 \cf4  \cf12 mode\cf4  \{\
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 calculator\cf4 : 
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf10 "Calc"\cf4 \
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 trt\cf4 : 
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf10 "Run"\cf4 \
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 converter\cf4 : 
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf10 "Conv"\cf4 \
+        \}\
+    \}\
+    \
+    
+\f0\b \cf2 func
+\f1\b0 \cf4  \cf8 getModeIcon\cf4 () -> \cf9 String\cf4  \{\
+        
+\f0\b \cf2 switch
+\f1\b0 \cf4  \cf12 mode\cf4  \{\
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 calculator\cf4 : 
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf10 "plus.circle"\cf4 \
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 trt\cf4 : 
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf10 "figure.run"\cf4 \
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 converter\cf4 : 
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf10 "arrow.triangle.2.circlepath"\cf4 \
+        \}\
+    \}\
+    \
+    
+\f0\b \cf2 func
+\f1\b0 \cf4  \cf8 getFormattedConvInput\cf4 () -> \cf9 String\cf4  \{\
+        
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 convInputString\cf4 .\cf14 isEmpty\cf4  \{ 
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf12 formatInput\cf4 (\cf10 ""\cf4 , \cf12 fps\cf4 : \cf12 convSourceRate\cf4 ) \}\
+        
+\f0\b \cf2 return
+\f1\b0 \cf4  \cf12 formatInput\cf4 (\cf12 convInputString\cf4 , \cf12 fps\cf4 : \cf12 convSourceRate\cf4 )\
+    \}\
+    \
+    
+\f0\b \cf2 func
 \f1\b0 \cf4  \cf8 checkForUpdate\cf4 () \{\
         
 \f0\b \cf2 if
@@ -1001,10 +1221,19 @@
     
 \f0\b \cf2 func
 \f1\b0 \cf4  \cf8 toggleAppMode\cf4 () \{\
-        \cf12 inputString\cf4  = \cf10 ""\cf4 \
-        \cf12 trtInString\cf4  = \cf10 ""\cf4 \
-        \cf12 trtOutString\cf4  = \cf10 ""\cf4 \
-        \cf12 mode\cf4  = (\cf12 mode\cf4  == .\cf12 calculator\cf4 ) ? .\cf12 trt\cf4  : .\cf12 calculator\cf4 \
+        
+\f0\b \cf2 switch
+\f1\b0 \cf4  \cf12 mode\cf4  \{\
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 calculator\cf4 : \cf12 mode\cf4  = .\cf12 trt\cf4 \
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 trt\cf4 : \cf12 mode\cf4  = .\cf12 converter\cf4 \
+        
+\f0\b \cf2 case
+\f1\b0 \cf4  .\cf12 converter\cf4 : \cf12 mode\cf4  = .\cf12 calculator\cf4 \
+        \}\
     \}\
     \
     
@@ -1085,7 +1314,7 @@
 \f1\b0 \cf4  \}\
             
 \f0\b \cf2 let
-\f1\b0 \cf4  clean = line.\cf14 replacingOccurrences\cf4 (\cf14 of\cf4 : \cf10 "= "\cf4 , \cf14 with\cf4 : \cf10 ""\cf4 ).\cf14 replacingOccurrences\cf4 (\cf14 of\cf4 : \cf10 "  "\cf4 , \cf14 with\cf4 : \cf10 ""\cf4 )\
+\f1\b0 \cf4  clean = line.\cf14 replacingOccurrences\cf4 (\cf14 of\cf4 : \cf10 "= "\cf4 , \cf14 with\cf4 : \cf10 ""\cf4 ).\cf14 replacingOccurrences\cf4 (\cf14 of\cf4 : \cf10 "\'a0 "\cf4 , \cf14 with\cf4 : \cf10 ""\cf4 )\
             
 \f0\b \cf2 if
 \f1\b0 \cf4  \cf12 isFramesMode\cf4  \{\
@@ -1143,7 +1372,9 @@
 \f1\b0 \cf4  \cf12 inputString\cf4 .\cf14 count\cf4  < limit \{ \cf12 inputString\cf4  += digit \}\
         \} 
 \f0\b \cf2 else
-\f1\b0 \cf4  \{\
+\f1\b0 \cf4  
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 trt\cf4  \{\
             
 \f0\b \cf2 let
 \f1\b0 \cf4  limit = \cf13 6\cf4  + \cf12 selectedFrameRate\cf4 .\cf12 frameDigits\cf4 \
@@ -1157,6 +1388,17 @@
 \f1\b0 \cf4  \{ 
 \f0\b \cf2 if
 \f1\b0 \cf4  \cf12 trtOutString\cf4 .\cf14 count\cf4  < limit \{ \cf12 trtOutString\cf4  += digit \} \}\
+        \} 
+\f0\b \cf2 else
+\f1\b0 \cf4  
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 converter\cf4  \{\
+            
+\f0\b \cf2 let
+\f1\b0 \cf4  limit = \cf13 6\cf4  + \cf12 convSourceRate\cf4 .\cf12 frameDigits\cf4 \
+            
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 convInputString\cf4 .\cf14 count\cf4  < limit \{ \cf12 convInputString\cf4  += digit \}\
         \}\
     \}\
     \
@@ -1165,12 +1407,15 @@
 \f1\b0 \cf4  \cf8 backspace\cf4 () \{\
         
 \f0\b \cf2 if
-\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 calculator\cf4  \{ 
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 calculator\cf4  \{\
+            
 \f0\b \cf2 if
-\f1\b0 \cf4  !\cf12 inputString\cf4 .\cf14 isEmpty\cf4  \{ \cf12 inputString\cf4 .\cf14 removeLast\cf4 () \} \}\
-        
+\f1\b0 \cf4  !\cf12 inputString\cf4 .\cf14 isEmpty\cf4  \{ \cf12 inputString\cf4 .\cf14 removeLast\cf4 () \}\
+        \} 
 \f0\b \cf2 else
-\f1\b0 \cf4  \{\
+\f1\b0 \cf4  
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 trt\cf4  \{\
             
 \f0\b \cf2 if
 \f1\b0 \cf4  \cf12 activeTrtField\cf4  == .\cf12 inPoint\cf4  \{ 
@@ -1181,6 +1426,14 @@
 \f1\b0 \cf4  \{ 
 \f0\b \cf2 if
 \f1\b0 \cf4  !\cf12 trtOutString\cf4 .\cf14 isEmpty\cf4  \{ \cf12 trtOutString\cf4 .\cf14 removeLast\cf4 () \} \}\
+        \} 
+\f0\b \cf2 else
+\f1\b0 \cf4  
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 converter\cf4  \{\
+            
+\f0\b \cf2 if
+\f1\b0 \cf4  !\cf12 convInputString\cf4 .\cf14 isEmpty\cf4  \{ \cf12 convInputString\cf4 .\cf14 removeLast\cf4 () \}\
         \}\
     \}\
     \
@@ -1189,12 +1442,23 @@
 \f1\b0 \cf4  \cf8 clearAll\cf4 () \{\
         
 \f0\b \cf2 if
-\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 calculator\cf4  \{ \cf12 inputString\cf4  = \cf10 ""\cf4 ; \cf12 tickerTape\cf4  = []; \cf12 accumulatedFrames\cf4  = \cf13 0\cf4 ; \cf12 pendingOperation\cf4  = .\cf14 none\cf4 ; \cf12 lastWasEquals\cf4  = 
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 calculator\cf4  \{\
+            \cf12 inputString\cf4  = \cf10 ""\cf4 ; \cf12 tickerTape\cf4  = []; \cf12 accumulatedFrames\cf4  = \cf13 0\cf4 ; \cf12 pendingOperation\cf4  = .\cf14 none\cf4 ; \cf12 lastWasEquals\cf4  = 
 \f0\b \cf2 false
-\f1\b0 \cf4  \}\
-        
+\f1\b0 \cf4 \
+        \} 
 \f0\b \cf2 else
-\f1\b0 \cf4  \{ \cf12 batchList\cf4 .\cf14 removeAll\cf4 (); \cf12 trtInString\cf4  = \cf10 ""\cf4 ; \cf12 trtOutString\cf4  = \cf10 ""\cf4  \}\
+\f1\b0 \cf4  
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 trt\cf4  \{\
+            \cf12 batchList\cf4 .\cf14 removeAll\cf4 (); \cf12 trtInString\cf4  = \cf10 ""\cf4 ; \cf12 trtOutString\cf4  = \cf10 ""\cf4 \
+        \} 
+\f0\b \cf2 else
+\f1\b0 \cf4  
+\f0\b \cf2 if
+\f1\b0 \cf4  \cf12 mode\cf4  == .\cf12 converter\cf4  \{\
+            \cf12 convInputString\cf4  = \cf10 ""\cf4 \
+        \}\
     \}\
     \
     
@@ -1224,12 +1488,12 @@
 \f1\b0 \cf4  safeDisplay = \cf12 getFormattedActiveDisplay\cf4 ()\
         
 \f0\b \cf2 if
-\f1\b0 \cf4  \cf12 accumulatedFrames\cf4  == \cf13 0\cf4  && \cf12 pendingOperation\cf4  == .\cf14 none\cf4  \{ \cf12 accumulatedFrames\cf4  = currentFrames; \cf12 tickerTape\cf4 .\cf14 append\cf4 (\cf10 "  "\cf4  + safeDisplay) \}\
+\f1\b0 \cf4  \cf12 accumulatedFrames\cf4  == \cf13 0\cf4  && \cf12 pendingOperation\cf4  == .\cf14 none\cf4  \{ \cf12 accumulatedFrames\cf4  = currentFrames; \cf12 tickerTape\cf4 .\cf14 append\cf4 (\cf10 "\'a0 "\cf4  + safeDisplay) \}\
         
 \f0\b \cf2 else
 \f1\b0 \cf4  
 \f0\b \cf2 if
-\f1\b0 \cf4  !\cf12 inputString\cf4 .\cf14 isEmpty\cf4  \{ \cf12 tickerTape\cf4 .\cf14 append\cf4 (\cf10 "  "\cf4  + safeDisplay); \cf12 performMath\cf4 (\cf12 newInput\cf4 : currentFrames) \}\
+\f1\b0 \cf4  !\cf12 inputString\cf4 .\cf14 isEmpty\cf4  \{ \cf12 tickerTape\cf4 .\cf14 append\cf4 (\cf10 "\'a0 "\cf4  + safeDisplay); \cf12 performMath\cf4 (\cf12 newInput\cf4 : currentFrames) \}\
         \cf12 pendingOperation\cf4  = op\
         
 \f0\b \cf2 let
@@ -1264,7 +1528,7 @@
 \f1\b0 \cf4  currentFrames = \cf12 isFramesMode\cf4  ? (\cf9 Int\cf4 (\cf12 inputString\cf4 ) ?? \cf13 0\cf4 ) : \cf11 TimecodeCalculator\cf4 .\cf12 inputToFrames\cf4 (\cf12 input\cf4 : \cf12 inputString\cf4 , \cf12 fps\cf4 : \cf12 selectedFrameRate\cf4 )\
         
 \f0\b \cf2 if
-\f1\b0 \cf4  !\cf12 inputString\cf4 .\cf14 isEmpty\cf4  \{ \cf12 tickerTape\cf4 .\cf14 append\cf4 (\cf10 "  "\cf4  + \cf12 getFormattedActiveDisplay\cf4 ()) \}\
+\f1\b0 \cf4  !\cf12 inputString\cf4 .\cf14 isEmpty\cf4  \{ \cf12 tickerTape\cf4 .\cf14 append\cf4 (\cf10 "\'a0 "\cf4  + \cf12 getFormattedActiveDisplay\cf4 ()) \}\
         \cf12 performMath\cf4 (\cf12 newInput\cf4 : currentFrames)\
         
 \f0\b \cf2 let
@@ -1326,7 +1590,7 @@
 \f1\b0 \cf4  line.\cf14 contains\cf4 (\cf10 ":"\cf4 ) || line.\cf14 contains\cf4 (\cf10 ";"\cf4 ) \{\
                 
 \f0\b \cf2 let
-\f1\b0 \cf4  clean = line.\cf14 replacingOccurrences\cf4 (\cf14 of\cf4 : \cf10 "= "\cf4 , \cf14 with\cf4 : \cf10 ""\cf4 ).\cf14 replacingOccurrences\cf4 (\cf14 of\cf4 : \cf10 "  "\cf4 , \cf14 with\cf4 : \cf10 ""\cf4 )\
+\f1\b0 \cf4  clean = line.\cf14 replacingOccurrences\cf4 (\cf14 of\cf4 : \cf10 "= "\cf4 , \cf14 with\cf4 : \cf10 ""\cf4 ).\cf14 replacingOccurrences\cf4 (\cf14 of\cf4 : \cf10 "\'a0 "\cf4 , \cf14 with\cf4 : \cf10 ""\cf4 )\
                 
 \f0\b \cf2 let
 \f1\b0 \cf4  raw = clean.\cf14 replacingOccurrences\cf4 (\cf14 of\cf4 : \cf10 ":"\cf4 , \cf14 with\cf4 : \cf10 ""\cf4 ).\cf14 replacingOccurrences\cf4 (\cf14 of\cf4 : \cf10 ";"\cf4 , \cf14 with\cf4 : \cf10 ""\cf4 )\
@@ -1336,7 +1600,7 @@
                 
 \f0\b \cf2 let
 \f1\b0 \cf4  s = \cf11 TimecodeCalculator\cf4 .\cf12 framesToString\cf4 (\cf12 totalFrames\cf4 : f, \cf12 fps\cf4 : newRate)\
-                newTape.\cf14 append\cf4 (line.\cf14 contains\cf4 (\cf10 "="\cf4 ) ? \cf10 "= "\cf4  + s : \cf10 "  "\cf4  + s)\
+                newTape.\cf14 append\cf4 (line.\cf14 contains\cf4 (\cf10 "="\cf4 ) ? \cf10 "= "\cf4  + s : \cf10 "\'a0 "\cf4  + s)\
             \} 
 \f0\b \cf2 else
 \f1\b0 \cf4  \{ newTape.\cf14 append\cf4 (line) \}\
@@ -1350,10 +1614,15 @@
     \
     
 \f0\b \cf2 func
-\f1\b0 \cf4  \cf8 formatInput\cf4 (\cf8 _\cf4  raw: \cf9 String\cf4 ) -> \cf9 String\cf4  \{\
+\f1\b0 \cf4  \cf8 formatInput\cf4 (\cf8 _\cf4  raw: \cf9 String\cf4 , \cf8 fps\cf4 : \cf11 FrameRate\cf4 ? = 
+\f0\b \cf2 nil
+\f1\b0 \cf4 ) -> \cf9 String\cf4  \{\
         
 \f0\b \cf2 let
-\f1\b0 \cf4  fDigits = \cf12 selectedFrameRate\cf4 .\cf12 frameDigits\cf4 \
+\f1\b0 \cf4  useFps = fps ?? \cf12 selectedFrameRate\cf4 \
+        
+\f0\b \cf2 let
+\f1\b0 \cf4  fDigits = useFps.\cf12 frameDigits\cf4 \
         
 \f0\b \cf2 let
 \f1\b0 \cf4  totalLen = \cf13 6\cf4  + fDigits\
@@ -1365,7 +1634,7 @@
 \f1\b0 \cf4  digits = \cf9 Array\cf4 (padded)\
         
 \f0\b \cf2 let
-\f1\b0 \cf4  sep = \cf12 selectedFrameRate\cf4 .\cf12 isDropFrame\cf4  ? \cf10 ";"\cf4  : \cf10 ":"\cf4 \
+\f1\b0 \cf4  sep = useFps.\cf12 isDropFrame\cf4  ? \cf10 ";"\cf4  : \cf10 ":"\cf4 \
         
 \f0\b \cf2 var
 \f1\b0 \cf4  text = \cf10 "\cf4 \\(digits[\cf13 0\cf4 ])\\(digits[\cf13 1\cf4 ])\\(sep)\\(digits[\cf13 2\cf4 ])\\(digits[\cf13 3\cf4 ])\\(sep)\\(digits[\cf13 4\cf4 ])\\(digits[\cf13 5\cf4 ])\\(sep)\cf10 "\cf4 \
@@ -1418,7 +1687,7 @@
 \f1\b0 \cf4  custom = \cf12 customSize\cf4  \{ 
 \f0\b \cf2 return
 \f1\b0 \cf4  custom \}\
-        \cf5 // FIX to ensure screen width is valid to avoid "Invalid frame dimension" crash\cf4 \
+        \cf5 // FIX: Ensure screen width is valid to avoid "Invalid frame dimension" crash\cf4 \
         
 \f0\b \cf2 let
 \f1\b0 \cf4  screenW = \cf9 UIScreen\cf4 .\cf14 main\cf4 .\cf14 bounds\cf4 .\cf14 width\cf4 \
@@ -1452,7 +1721,6 @@
                     \cf9 Text\cf4 (\cf12 label\cf4 ).\cf14 font\cf4 (.\cf14 system\cf4 (\cf14 size\cf4 : \cf13 40\cf4 , \cf14 weight\cf4 : .\cf14 medium\cf4 , \cf14 design\cf4 : .\cf14 rounded\cf4 )).\cf14 foregroundColor\cf4 (\cf12 textColor\cf4 )\
                 \}\
             \}\
-            \cf5 // If customSize is nil, let the parent container size the button via frame\cf4 \
             .\cf14 frame\cf4 (\cf14 width\cf4 : \cf12 size\cf4 , \cf14 height\cf4 : \cf12 size\cf4 )\
         \}\
     \}\
@@ -1478,8 +1746,8 @@
                         \cf12 featureRow\cf4 (\cf12 icon\cf4 : \cf10 "plus.circle"\cf4 , \cf12 title\cf4 : \cf10 "Calc Mode"\cf4 , \cf12 desc\cf4 : \cf10 "Add, subtract, multiply, and divide timecodes."\cf4 )\
                         \cf12 featureRow\cf4 (\cf12 icon\cf4 : \cf10 "arrow.left.arrow.right"\cf4 , \cf12 title\cf4 : \cf10 "TC / Fr Conversion"\cf4 , \cf12 desc\cf4 : \cf10 "Instantly convert between timecode and frames."\cf4 )\
                         \cf12 featureRow\cf4 (\cf12 icon\cf4 : \cf10 "figure.run"\cf4 , \cf12 title\cf4 : \cf10 "Run Mode"\cf4 , \cf12 desc\cf4 : \cf10 "Calculate TRT for multiple segments."\cf4 )\
+                        \cf12 featureRow\cf4 (\cf12 icon\cf4 : \cf10 "arrow.triangle.2.circlepath"\cf4 , \cf12 title\cf4 : \cf10 "Cross Convert"\cf4 , \cf12 desc\cf4 : \cf10 "Convert durations between frame rates."\cf4 )\
                         \cf12 featureRow\cf4 (\cf12 icon\cf4 : \cf10 "film.stack"\cf4 , \cf12 title\cf4 : \cf10 "Frame Rates"\cf4 , \cf12 desc\cf4 : \cf10 "Supports all SMPTE standards."\cf4 )\
-                        \cf12 featureRow\cf4 (\cf12 icon\cf4 : \cf10 "square.and.arrow.up"\cf4 , \cf12 title\cf4 : \cf10 "Share"\cf4 , \cf12 desc\cf4 : \cf10 "Export calculations as text."\cf4 )\
                     \}.\cf14 padding\cf4 ()\
                 \}\
             \}\
