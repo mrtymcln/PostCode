@@ -22,7 +22,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		B05F2C282F17AFF400107CED /* Exceptions for "PostCode" folder in "PostCode" target */ = {
+		B05F2C2F2F18E44500107CED /* Exceptions for "PostCode" folder in "PostCode" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -35,7 +35,7 @@
 		B08F44762F11DFDA00B52D8A /* PostCode */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				B05F2C282F17AFF400107CED /* Exceptions for "PostCode" folder in "PostCode" target */,
+				B05F2C2F2F18E44500107CED /* Exceptions for "PostCode" folder in "PostCode" target */,
 			);
 			path = PostCode;
 			sourceTree = "<group>";
@@ -322,7 +322,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = RV65KD7NWB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -358,7 +358,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = RV65KD7NWB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
