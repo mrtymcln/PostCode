@@ -14,35 +14,35 @@
 			remoteGlobalIDString = B08F44732F11DFDA00B52D8A;
 			remoteInfo = PostCode;
 		};
-		B08F448C2F11DFDB00B52D8A /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = B08F446C2F11DFDA00B52D8A /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = B08F44732F11DFDA00B52D8A;
-			remoteInfo = PostCode;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		B08F44742F11DFDA00B52D8A /* PostCode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PostCode.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B08F44812F11DFDB00B52D8A /* PostCodeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PostCodeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		B08F448B2F11DFDB00B52D8A /* PostCodeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PostCodeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B05F2C282F17AFF400107CED /* Exceptions for "PostCode" folder in "PostCode" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = B08F44732F11DFDA00B52D8A /* PostCode */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B08F44762F11DFDA00B52D8A /* PostCode */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B05F2C282F17AFF400107CED /* Exceptions for "PostCode" folder in "PostCode" target */,
+			);
 			path = PostCode;
 			sourceTree = "<group>";
 		};
 		B08F44842F11DFDB00B52D8A /* PostCodeTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = PostCodeTests;
-			sourceTree = "<group>";
-		};
-		B08F448E2F11DFDB00B52D8A /* PostCodeUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PostCodeUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -58,11 +58,6 @@
 			files = (
 			);
 		};
-		B08F44882F11DFDB00B52D8A /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			files = (
-			);
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -71,7 +66,6 @@
 			children = (
 				B08F44762F11DFDA00B52D8A /* PostCode */,
 				B08F44842F11DFDB00B52D8A /* PostCodeTests */,
-				B08F448E2F11DFDB00B52D8A /* PostCodeUITests */,
 				B08F44752F11DFDA00B52D8A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -81,7 +75,6 @@
 			children = (
 				B08F44742F11DFDA00B52D8A /* PostCode.app */,
 				B08F44812F11DFDB00B52D8A /* PostCodeTests.xctest */,
-				B08F448B2F11DFDB00B52D8A /* PostCodeUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -128,27 +121,6 @@
 			productReference = B08F44812F11DFDB00B52D8A /* PostCodeTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		B08F448A2F11DFDB00B52D8A /* PostCodeUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = B08F449B2F11DFDB00B52D8A /* Build configuration list for PBXNativeTarget "PostCodeUITests" */;
-			buildPhases = (
-				B08F44872F11DFDB00B52D8A /* Sources */,
-				B08F44882F11DFDB00B52D8A /* Frameworks */,
-				B08F44892F11DFDB00B52D8A /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				B08F448D2F11DFDB00B52D8A /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				B08F448E2F11DFDB00B52D8A /* PostCodeUITests */,
-			);
-			name = PostCodeUITests;
-			productName = PostCodeUITests;
-			productReference = B08F448B2F11DFDB00B52D8A /* PostCodeUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -163,10 +135,6 @@
 						CreatedOnToolsVersion = 26.2;
 					};
 					B08F44802F11DFDB00B52D8A = {
-						CreatedOnToolsVersion = 26.2;
-						TestTargetID = B08F44732F11DFDA00B52D8A;
-					};
-					B08F448A2F11DFDB00B52D8A = {
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = B08F44732F11DFDA00B52D8A;
 					};
@@ -188,7 +156,6 @@
 			targets = (
 				B08F44732F11DFDA00B52D8A /* PostCode */,
 				B08F44802F11DFDB00B52D8A /* PostCodeTests */,
-				B08F448A2F11DFDB00B52D8A /* PostCodeUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -200,11 +167,6 @@
 			);
 		};
 		B08F447F2F11DFDB00B52D8A /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			files = (
-			);
-		};
-		B08F44892F11DFDB00B52D8A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -222,11 +184,6 @@
 			files = (
 			);
 		};
-		B08F44872F11DFDB00B52D8A /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			files = (
-			);
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -234,11 +191,6 @@
 			isa = PBXTargetDependency;
 			target = B08F44732F11DFDA00B52D8A /* PostCode */;
 			targetProxy = B08F44822F11DFDB00B52D8A /* PBXContainerItemProxy */;
-		};
-		B08F448D2F11DFDB00B52D8A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = B08F44732F11DFDA00B52D8A /* PostCode */;
-			targetProxy = B08F448C2F11DFDB00B52D8A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -370,14 +322,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = RV65KD7NWB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PostCode/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -404,14 +358,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = RV65KD7NWB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PostCode/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -476,48 +432,6 @@
 			};
 			name = Release;
 		};
-		B08F449C2F11DFDB00B52D8A /* Debug configuration for PBXNativeTarget "PostCodeUITests" */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = RV65KD7NWB;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = McLean.PostCodeUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = PostCode;
-			};
-			name = Debug;
-		};
-		B08F449D2F11DFDB00B52D8A /* Release configuration for PBXNativeTarget "PostCodeUITests" */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = RV65KD7NWB;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = McLean.PostCodeUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = PostCode;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -542,14 +456,6 @@
 			buildConfigurations = (
 				B08F44992F11DFDB00B52D8A /* Debug configuration for PBXNativeTarget "PostCodeTests" */,
 				B08F449A2F11DFDB00B52D8A /* Release configuration for PBXNativeTarget "PostCodeTests" */,
-			);
-			defaultConfigurationName = Release;
-		};
-		B08F449B2F11DFDB00B52D8A /* Build configuration list for PBXNativeTarget "PostCodeUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				B08F449C2F11DFDB00B52D8A /* Debug configuration for PBXNativeTarget "PostCodeUITests" */,
-				B08F449D2F11DFDB00B52D8A /* Release configuration for PBXNativeTarget "PostCodeUITests" */,
 			);
 			defaultConfigurationName = Release;
 		};

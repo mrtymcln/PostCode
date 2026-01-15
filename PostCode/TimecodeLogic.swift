@@ -9,11 +9,17 @@ struct FrameRate: Hashable, Identifiable, RawRepresentable, Codable {
     let rateMultiplier: Double
     
     // UI Helpers
-    // Only used for the last separator between Seconds and Frames
     var separator: String { isDropFrame ? ";" : ":" }
     
     var frameDigits: Int {
         return baseFPS > 99 ? 3 : 2
+    }
+    
+    // Dynamic Drop Frame Logic
+    // 29.97 (30 base) drops 2 frames. 59.94 (60 base) drops 4 frames.
+    var dropFrameCount: Int {
+        guard isDropFrame else { return 0 }
+        return baseFPS == 60 ? 4 : 2
     }
 
 // MARK: - RawRepresentable
@@ -61,24 +67,33 @@ struct FrameRate: Hashable, Identifiable, RawRepresentable, Codable {
 
 // MARK: - CALCULATION LOGIC
 struct TimecodeCalculator {
-    
     // Frames to String
     static func framesToString(totalFrames: Int, fps: FrameRate) -> String {
-        var frames = totalFrames
+        // Handle negative timecode nicely
+        let isNegative = totalFrames < 0
+        var frames = abs(totalFrames)
         let base = fps.baseFPS
         guard base > 0 else { return "00:00:00:00" }
         
-        // Improved Drop Frame Algorithm
+        // Dynamic Drop Frame Algorithm
         if fps.isDropFrame {
-            let framesPer10Min = 17982
+            let drops = fps.dropFrameCount // 2 for 30fps, 4 for 60fps
+            // 10 minutes in frames = (Base * 60 * 10) - (9 drops * Amount)
+            // 29.97: 18000 - 18 = 17982
+            // 59.94: 36000 - 36 = 35964
+            let framesPer10Min = (base * 600) - (drops * 9)
+            
             let D = frames / framesPer10Min
             let M = frames % framesPer10Min
             
-            if M >= 1800 {
-                let extraMinutes = (M - 1800) / 1798
-                frames += 18 * D + 2 * (extraMinutes + 1)
+            // If remainder is greater than 1 minute of non-dropped frames
+            if M >= (base * 60) {
+                // Determine how many extra minutes fit, accounting for the drops
+                let framesPerRealMin = (base * 60) - drops
+                let extraMinutes = (M - (base * 60)) / framesPerRealMin
+                frames += (drops * 9) * D + drops * (extraMinutes + 1)
             } else {
-                frames += 18 * D
+                frames += (drops * 9) * D
             }
         }
 
@@ -90,21 +105,24 @@ struct TimecodeCalculator {
         
         let frameFormat = fps.frameDigits == 3 ? "%03d" : "%02d"
         
-        // Correct Separators
-        // Hardcode ":" for H:M:S, and only use the dynamic separator for S;F
         let formatString = "%02d:%02d:%02d%@\(frameFormat)"
+        let timeString = String(format: formatString, h, m, s, fps.separator, f)
         
-        return String(format: formatString, h, m, s, fps.separator, f)
+        // Prepend minus sign if needed
+        return isNegative ? "-\(timeString)" : timeString
     }
 
     // Input to Frames
     static func inputToFrames(input: String, fps: FrameRate) -> Int {
         guard fps.baseFPS > 0 else { return 0 }
         
+        // Strip non-numeric characters for safer parsing
+        let numericInput = input.filter("0123456789".contains)
+        
         let fDigits = fps.frameDigits
         let totalLen = 6 + fDigits
         
-        let padded = String(repeating: "0", count: max(0, totalLen - input.count)) + input
+        let padded = String(repeating: "0", count: max(0, totalLen - numericInput.count)) + numericInput
         let digits = Array(padded)
         
         let h = Int(String(digits[0...1])) ?? 0
@@ -125,11 +143,14 @@ struct TimecodeCalculator {
 
         if fps.isDropFrame {
             let totalMinutes = h * 60 + m
-            let dropFrames = (totalMinutes - (totalMinutes / 10)) * 2
+            let drops = fps.dropFrameCount
+            // Use dynamic drop count (2 or 4) instead of hardcoded 2
+            let dropFrames = (totalMinutes - (totalMinutes / 10)) * drops
             totalFrames -= dropFrames
         }
         
-        return totalFrames
+        // If original string had a minus, flip the result
+        return input.contains("-") ? -totalFrames : totalFrames
     }
     
     static func framesToRealSeconds(totalFrames: Int, fps: FrameRate) -> Double {

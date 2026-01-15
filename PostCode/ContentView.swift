@@ -39,6 +39,9 @@ struct ContentView: View {
     @State private var showCustomFpsAlert = false
     @State private var customFpsInput = ""
     
+    // EASTER EGG STATE
+    @State private var showEasterEgg = false
+    
     // HARDWARE FOCUS
     @FocusState private var isViewFocused: Bool
     
@@ -105,12 +108,7 @@ struct ContentView: View {
     }
     
     var convResultString: String {
-        // 1. Direct Pass-through
-        if convSourceRate == convDestRate {
-            return getFormattedConvInput()
-        }
-        
-        // 2. Determine Source Frames (handle TC vs Frames input)
+        if convSourceRate == convDestRate { return getFormattedConvInput() }
         let srcFrames: Double
         if isFramesMode {
             srcFrames = Double(Int(convInputString) ?? 0)
@@ -118,16 +116,16 @@ struct ContentView: View {
             srcFrames = Double(TimecodeCalculator.inputToFrames(input: convInputString, fps: convSourceRate))
         }
         
-        // 3. High Precision Conversion
         let srcBase = Double(convSourceRate.baseFPS)
         let srcMult = convSourceRate.rateMultiplier
         let dstBase = Double(convDestRate.baseFPS)
         let dstMult = convDestRate.rateMultiplier
         
+        if srcBase == 0 || dstMult == 0 { return "Error" }
         let exactFrames = srcFrames * (srcMult / srcBase) * (dstBase / dstMult)
+        if exactFrames.isNaN || exactFrames.isInfinite { return "Error" }
         let finalFrames = Int(round(exactFrames))
         
-        // 4. Return formatted string based on TC/FR toggle
         if isFramesMode {
             return "\(finalFrames)"
         } else {
@@ -139,15 +137,24 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { geo in
             NavigationStack {
-                ZStack {
+                ZStack(alignment: .top) {
                     // BACKGROUND
                     Color.black.ignoresSafeArea()
                         .onTapGesture { isViewFocused = true }
                     
                     if isPad {
                         ipadLayout(width: geo.size.width, height: geo.size.height)
+                            .ignoresSafeArea(.keyboard)
                     } else {
                         iphoneLayout(width: geo.size.width, height: geo.size.height)
+                            .ignoresSafeArea(.keyboard)
+                    }
+                    
+                    // EASTER EGG LAYER
+                    if showEasterEgg {
+                        EasterEggView()
+                            .zIndex(100)
+                            .allowsHitTesting(false)
                     }
                 }
                 .ignoresSafeArea(.keyboard)
@@ -158,6 +165,9 @@ struct ContentView: View {
                     Button("Cancel", role: .cancel) { }
                     Button("OK") {
                         if let newBase = Int(customFpsInput), newBase > 0 {
+                            if newBase == 14 || newBase == 88 {
+                                triggerEasterEgg()
+                            }
                             let customRate = FrameRate(id: "\(newBase)", baseFPS: newBase)
                             changeFrameRate(to: customRate)
                         }
@@ -165,7 +175,9 @@ struct ContentView: View {
                     }
                 } message: { Text("") }
             }
-
+            .sheet(isPresented: $showAboutSheet) {
+                Text("About PostCode").presentationDetents([.medium])
+            }
             .sheet(isPresented: $showWelcomeSheet, onDismiss: {
                 if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
                     lastRunVersion = currentVersion
@@ -175,7 +187,6 @@ struct ContentView: View {
             }
             .preferredColorScheme(.dark)
         }
-        // GLOBAL KEYBOARD HANDLER
         .focusable()
         .focused($isViewFocused)
         .onKeyPress { press in
@@ -186,6 +197,16 @@ struct ContentView: View {
             isViewFocused = true
             oldFrameRate = selectedFrameRate
             checkForUpdate()
+        }
+    }
+    
+    // EASTER EGG TRIGGER
+    func triggerEasterEgg() {
+        let generator = UIImpactFeedbackGenerator(style: .heavy)
+        generator.impactOccurred()
+        withAnimation { showEasterEgg = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation { showEasterEgg = false }
         }
     }
 }
@@ -237,8 +258,10 @@ extension ContentView {
     private func iphoneLayout(width: CGFloat, height: CGFloat) -> some View {
         VStack(spacing: 0) {
             headerView
-                .padding(.vertical, 10)
-                .zIndex(10)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+                .background(Color.black)
+                .zIndex(20)
             
             ZStack {
                 if mode == .calculator {
@@ -262,18 +285,18 @@ extension ContentView {
             keypadLayout(width: width)
                 .padding(.bottom, 20)
         }
+        .frame(width: width)
     }
     
     // HEADER
     private var headerView: some View {
         HStack(spacing: 8) {
-            // MODE PICKER
             Button(action: { withAnimation { toggleAppMode() } }) {
                 pillLabel(text: getModeLabel(),
                           icon: getModeIcon(),
                           color: Color(UIColor.systemGray5))
             }
-            // FPS PICKER
+            
             if mode != .converter {
                 Menu {
                     ForEach(FrameRate.allCases) { rate in
@@ -292,13 +315,12 @@ extension ContentView {
                     pillLabel(text: selectedFrameRate.id, icon: "chevron.up.chevron.down")
                 }
             }
-            // TC/FR TOGGLE
+            
             Button(action: { withAnimation { toggleDisplayMode() } }) {
                 pillLabel(text: isFramesMode ? "Fr" : "TC",
                           icon: isFramesMode ? "film" : "clock",
                           color: Color(UIColor.systemGray5))
             }
-            // Make toggle only visible in Calc and Conv modes
             .opacity(mode == .trt ? 0 : 1)
             .disabled(mode == .trt)
 
@@ -333,12 +355,16 @@ extension ContentView {
                             .font(.system(size: 20, weight: .semibold, design: .monospaced))
                             .foregroundColor(.green)
                     }
+                    // MAIN DISPLAY: Size 42 fits "00:00:00:00" without scaling, preventing weird jumpiness
                     Text(getFormattedActiveDisplay())
-                        .font(.system(size: 60, weight: .semibold, design: .monospaced))
+                        .font(.system(size: 42, weight: .semibold, design: .monospaced))
                         .foregroundColor(.green)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
+                        .frame(height: 70)
                         .id("bottom")
+                        // Disable font animation to be extra safe
+                        .animation(nil, value: isFramesMode)
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(20)
@@ -401,60 +427,67 @@ extension ContentView {
     
     // CONVERTER DISPLAY
     private var converterDisplayView: some View {
-        VStack(spacing: 20) {
-            // From box
-            VStack {
-                HStack {
-                    Menu {
-                        ForEach(FrameRate.allCases) { rate in
-                            Button(rate.id) { convSourceRate = rate }
-                        }
-                    } label: {
-                        pillLabel(text: convSourceRate.id, icon: "chevron.up.chevron.down")
-                    }
-                    Spacer()
-                    Text("FROM:").font(.caption).fontWeight(.bold).foregroundColor(.gray)
-                }
+        ScrollView {
+            VStack(spacing: 20) {
                 
-                Text(getFormattedConvInput())
-                    .font(.system(size: 50, weight: .bold, design: .monospaced))
-                    .foregroundColor(.orange)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-            .padding()
-            .background(colorDarkGray)
-            .cornerRadius(12)
-            
-            // To box
-            VStack {
-                HStack {
-                    Menu {
-                        ForEach(FrameRate.allCases) { rate in
-                            Button(rate.id) { convDestRate = rate }
+                VStack {
+                    HStack {
+                        Menu {
+                            ForEach(FrameRate.allCases) { rate in
+                                Button(rate.id) { convSourceRate = rate }
+                            }
+                        } label: {
+                            pillLabel(text: convSourceRate.id, icon: "chevron.up.chevron.down")
                         }
-                    } label: {
-                        pillLabel(text: convDestRate.id, icon: "chevron.up.chevron.down")
+                        Spacer()
+                        Text("FROM:").font(.caption).fontWeight(.bold).foregroundColor(.gray)
                     }
-                    Spacer()
-                    Text("TO:").font(.caption).fontWeight(.bold).foregroundColor(.gray)
+                    
+                    Text(getFormattedConvInput())
+                        .font(.system(size: 42, weight: .semibold, design: .monospaced)) // Size 42
+                        .foregroundColor(.orange)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(height: 60)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .animation(nil, value: isFramesMode)
                 }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(colorDarkGray)
+                .cornerRadius(12)
                 
-                Text(convResultString)
-                    .font(.system(size: 50, weight: .bold, design: .monospaced))
-                    .foregroundColor(.green)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                VStack {
+                    HStack {
+                        Menu {
+                            ForEach(FrameRate.allCases) { rate in
+                                Button(rate.id) { convDestRate = rate }
+                            }
+                        } label: {
+                            pillLabel(text: convDestRate.id, icon: "chevron.up.chevron.down")
+                        }
+                        Spacer()
+                        Text("TO:").font(.caption).fontWeight(.bold).foregroundColor(.gray)
+                    }
+                    
+                    Text(convResultString)
+                        .font(.system(size: 42, weight: .semibold, design: .monospaced)) // Size 42
+                        .foregroundColor(.green)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .frame(height: 60)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .animation(nil, value: isFramesMode)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(colorDarkGray)
+                .cornerRadius(12)
+                
+                Spacer()
             }
-            .padding()
-            .background(colorDarkGray)
-            .cornerRadius(12)
-            
-            Spacer()
+            .padding(.horizontal, 16)
         }
-        .padding(.horizontal, 16)
     }
     
     // TRT INPUTS
@@ -474,7 +507,8 @@ extension ContentView {
                     .frame(width: 50, height: 50).background(colorOrange).clipShape(Circle())
             }
         }
-        .padding()
+        .padding(.vertical, 8)
+        .padding(.horizontal)
         .background(colorDarkGray)
         .cornerRadius(12)
         .padding(.horizontal, 16)
@@ -483,7 +517,8 @@ extension ContentView {
     // KEYPAD
     private func keypadLayout(width: CGFloat) -> some View {
         let safeWidth = width > 0 ? width : 375
-        let calcBtnSize = (safeWidth - (5 * 16)) / 4
+        let calcBtnSize = max(0, (safeWidth - (5 * 16)) / 4)
+        let equalsWidth = (calcBtnSize * 4) + (buttonSpacing * 3)
         
         return VStack(spacing: buttonSpacing) {
             HStack(spacing: buttonSpacing) {
@@ -491,7 +526,7 @@ extension ContentView {
                 CalcButton(label: "8", color: colorDarkGray, customSize: calcBtnSize) { addDigit("8") }
                 CalcButton(label: "9", color: colorDarkGray, customSize: calcBtnSize) { addDigit("9") }
                 if mode == .calculator {
-                    CalcButton(label: "Divide", systemImage: "divide", color: colorOrange, customSize: calcBtnSize) { setOperation(.divide) }
+                    CalcButton(label: "Divide", systemImage: "divide", color: colorOrange, textColor: .white, customSize: calcBtnSize, isActive: pendingOperation == .divide) { setOperation(.divide) }
                 } else { Spacer().frame(width: calcBtnSize) }
             }
             HStack(spacing: buttonSpacing) {
@@ -499,7 +534,7 @@ extension ContentView {
                 CalcButton(label: "5", color: colorDarkGray, customSize: calcBtnSize) { addDigit("5") }
                 CalcButton(label: "6", color: colorDarkGray, customSize: calcBtnSize) { addDigit("6") }
                 if mode == .calculator {
-                    CalcButton(label: "Multiply", systemImage: "multiply", color: colorOrange, customSize: calcBtnSize) { setOperation(.multiply) }
+                    CalcButton(label: "Multiply", systemImage: "multiply", color: colorOrange, textColor: .white, customSize: calcBtnSize, isActive: pendingOperation == .multiply) { setOperation(.multiply) }
                 } else { Spacer().frame(width: calcBtnSize) }
             }
             HStack(spacing: buttonSpacing) {
@@ -507,7 +542,7 @@ extension ContentView {
                 CalcButton(label: "2", color: colorDarkGray, customSize: calcBtnSize) { addDigit("2") }
                 CalcButton(label: "3", color: colorDarkGray, customSize: calcBtnSize) { addDigit("3") }
                 if mode == .calculator {
-                    CalcButton(label: "Minus", systemImage: "minus", color: colorOrange, customSize: calcBtnSize) { setOperation(.subtract) }
+                    CalcButton(label: "Minus", systemImage: "minus", color: colorOrange, textColor: .white, customSize: calcBtnSize, isActive: pendingOperation == .subtract) { setOperation(.subtract) }
                 } else { Spacer().frame(width: calcBtnSize) }
             }
             HStack(spacing: buttonSpacing) {
@@ -515,7 +550,7 @@ extension ContentView {
                 CalcButton(label: "00", color: colorDarkGray, customSize: calcBtnSize) { addDigit("00") }
                 CalcButton(label: "Backspace", systemImage: "delete.left", color: colorLightGray, textColor: .white, customSize: calcBtnSize) { backspace() }
                 if mode == .calculator {
-                    CalcButton(label: "Plus", systemImage: "plus", color: colorOrange, customSize: calcBtnSize) { setOperation(.add) }
+                    CalcButton(label: "Plus", systemImage: "plus", color: colorOrange, textColor: .white, customSize: calcBtnSize, isActive: pendingOperation == .add) { setOperation(.add) }
                 } else { Spacer().frame(width: calcBtnSize) }
             }
             if mode == .calculator {
@@ -527,8 +562,10 @@ extension ContentView {
                     }) {
                         RoundedRectangle(cornerRadius: 40).fill(Color.orange)
                             .overlay(Image(systemName: "equal").font(.largeTitle).fontWeight(.semibold).foregroundColor(.white))
-                            .frame(height: calcBtnSize)
+                            .frame(width: equalsWidth, height: calcBtnSize)
+                            .scaleEffect(1.0)
                     }
+                    .buttonStyle(TactileButtonStyle())
                 }.padding(.horizontal, 16)
             }
         }
@@ -539,7 +576,6 @@ extension ContentView {
         let char = press.characters
         
         if mode == .calculator {
-            // 1. OPERATION SHORTCUTS
             if char == "+" || (char == "=" && press.modifiers.contains(.shift)) {
                 setOperation(.add); return .handled
             }
@@ -554,7 +590,6 @@ extension ContentView {
             if char == "c" || char == "C" { clearAll(); return .handled }
         }
         
-        // 2. NUMBERS
         if "0123456789".contains(char) && !press.modifiers.contains(.shift) {
             addDigit(char)
             return .handled
@@ -580,7 +615,11 @@ extension ContentView {
     private func pillLabel(text: String, icon: String, color: Color = Color(UIColor.systemGray5)) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon).font(.body)
-            Text(text).font(.system(.subheadline, design: .rounded)).fontWeight(.semibold)
+            Text(text)
+                .font(.system(.subheadline, design: .rounded))
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
         .background(color).foregroundColor(.white).clipShape(Capsule())
@@ -599,7 +638,7 @@ extension ContentView {
                 .font(.system(.subheadline, design: .monospaced))
                 .foregroundColor(isActive ? colorGreen : .white)
         }
-        .padding(8).frame(maxWidth: .infinity, alignment: .leading)
+        .padding(5).frame(maxWidth: .infinity, alignment: .leading)
         .background(isActive ? colorGreen.opacity(0.1) : Color.black.opacity(0.3))
         .cornerRadius(8)
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(isActive ? colorGreen : Color.clear, lineWidth: 1))
@@ -652,7 +691,8 @@ extension ContentView {
     func addBatchEntry() {
         let inFrames = TimecodeCalculator.inputToFrames(input: trtInString, fps: selectedFrameRate)
         let outFrames = TimecodeCalculator.inputToFrames(input: trtOutString, fps: selectedFrameRate)
-        let dur = outFrames - inFrames
+        let dur = (outFrames - inFrames) + 1
+        
         if dur > 0 {
             let durString = TimecodeCalculator.framesToString(totalFrames: dur, fps: selectedFrameRate)
             let entry = BatchEntry(inPoint: formatInput(trtInString), outPoint: formatInput(trtOutString), durationFrames: dur, durationString: durString)
@@ -676,18 +716,17 @@ extension ContentView {
                     }
                 }
             }
-            // Ticker Tape for Calc history
             var newTape: [String] = []
             for line in tickerTape {
                 if line.count <= 1 && !line.first!.isNumber { newTape.append(line); continue }
                 let clean = line.replacingOccurrences(of: "= ", with: "").replacingOccurrences(of: "  ", with: "")
-                if !isFramesMode { // Switching TO Frames
+                if !isFramesMode {
                     let rawInput = clean.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
                     if line.contains(":") || line.contains(";") {
                         let frames = TimecodeCalculator.inputToFrames(input: rawInput, fps: selectedFrameRate)
                         newTape.append(line.replacingOccurrences(of: clean, with: "\(frames)"))
                     } else { newTape.append(line) }
-                } else { // Switching TO TC
+                } else {
                     if let frames = Int(clean) {
                         let tc = TimecodeCalculator.framesToString(totalFrames: frames, fps: selectedFrameRate)
                         newTape.append(line.replacingOccurrences(of: clean, with: tc))
@@ -698,10 +737,10 @@ extension ContentView {
             
         } else if mode == .converter {
             if !convInputString.isEmpty {
-                if !isFramesMode { // TC -> Frames
+                if !isFramesMode {
                     let f = TimecodeCalculator.inputToFrames(input: convInputString, fps: convSourceRate)
                     convInputString = "\(f)"
-                } else { // Frames -> TC
+                } else {
                     if let f = Int(convInputString) {
                         let tc = TimecodeCalculator.framesToString(totalFrames: f, fps: convSourceRate)
                         let raw = tc.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: ";", with: "")
@@ -819,19 +858,33 @@ extension ContentView {
 }
 
 // MARK: - REUSABLE COMPONENTS
+
+struct TactileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.88 : 1.0)
+            .animation(.interactiveSpring(response: 0.2, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
+
 struct CalcButton: View {
     let label: String
     var systemImage: String? = nil
     let color: Color
     var textColor: Color = .white
     var customSize: CGFloat? = nil
+    var isActive: Bool = false
     let action: () -> Void
+    
     private var size: CGFloat {
         if let custom = customSize { return custom }
-        // FIX: Ensure screen width is valid to avoid "Invalid frame dimension" crash
         let screenW = UIScreen.main.bounds.width
         return screenW > 0 ? (screenW - (5 * 16)) / 4 : 70
     }
+    
+    private var backgroundColor: Color { isActive ? .white : color }
+    private var foregroundColor: Color { isActive ? color : textColor }
+    
     var body: some View {
         Button(action: {
             let generator = UIImpactFeedbackGenerator(style: .light)
@@ -839,15 +892,16 @@ struct CalcButton: View {
             action()
         }) {
             ZStack {
-                Circle().fill(color)
+                Circle().fill(backgroundColor)
                 if let systemImage = systemImage {
-                    Image(systemName: systemImage).font(.system(size: 35, weight: .semibold)).foregroundColor(textColor)
+                    Image(systemName: systemImage).font(.system(size: 35, weight: .semibold)).foregroundColor(foregroundColor)
                 } else {
-                    Text(label).font(.system(size: 40, weight: .medium, design: .rounded)).foregroundColor(textColor)
+                    Text(label).font(.system(size: 40, weight: .medium, design: .rounded)).foregroundColor(foregroundColor)
                 }
             }
             .frame(width: size, height: size)
         }
+        .buttonStyle(TactileButtonStyle())
     }
 }
 
@@ -860,7 +914,6 @@ struct WelcomeView: View {
                     Text("Welcome to PostCode").font(.largeTitle).bold().padding(.top, 40)
                     Text("Created by Marty McLean").font(.title3).bold().padding(.top, 0)
                     VStack(alignment: .leading, spacing: 20) {
-                        
                         featureRow(icon: "plus.circle", title: "Calculator Mode", desc: "Add, subtract, multiply, and divide timecodes.")
                         featureRow(icon: "figure.run", title: "Run Mode", desc: "Enter the In and Out points of multiple segments to calculate the total run time.")
                         featureRow(icon: "arrow.up.arrow.down", title: "Converter Mode", desc: "Cross-convert a timecode between different frame rates.")
@@ -877,6 +930,29 @@ struct WelcomeView: View {
         HStack(spacing: 15) {
             Image(systemName: icon).font(.largeTitle).foregroundColor(.blue).frame(width: 50)
             VStack(alignment: .leading, spacing: 2) { Text(title).font(.headline); Text(desc).font(.subheadline).foregroundColor(.gray).fixedSize(horizontal: false, vertical: true) }
+        }
+    }
+}
+
+// MARK: - EASTER EGG
+struct EasterEggView: View {
+    @State private var scale = 0.1
+    @State private var opacity = 1.0
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.7).ignoresSafeArea()
+            
+            Text("⚡️")
+                .font(.system(size: 100)) // Start large
+                .scaleEffect(scale)
+                .opacity(opacity)
+                .onAppear {
+                    withAnimation(.easeOut(duration: 1.5)) {
+                        scale = 6.66 // Grow
+                        opacity = 0.0  // Fade out
+                    }
+                }
         }
     }
 }

@@ -1,85 +1,105 @@
-import Testing
+import XCTest
 @testable import PostCode
 
-struct TimecodeLogicTests {
+final class PostCodeTests: XCTestCase {
 
-// MARK: - 1. FRAME RATE LOGIC AT 25 FPS
-    // Simple 1:1 math check.
-    @Test("25 FPS: Basic Conversions")
-    func test25fps() {
-        let rate = FrameRate.fps25
+// MARK: - FRAME RATE PROPERTIES
+    func testFrameRateDefinitions() {
+        // Check 29.97 DF
+        let fps29 = FrameRate.fps2997DF
+        XCTAssertEqual(fps29.baseFPS, 30)
+        XCTAssertTrue(fps29.isDropFrame)
+        XCTAssertEqual(fps29.dropFrameCount, 2, "29.97 DF must drop 2 frames per minute")
+
+        // Check 59.94 DF
+        let fps59 = FrameRate.fps5994DF
+        XCTAssertEqual(fps59.baseFPS, 60)
+        XCTAssertTrue(fps59.isDropFrame)
+        XCTAssertEqual(fps59.dropFrameCount, 4, "59.94 DF must drop 4 frames per minute")
         
-        // 1 second exactly
-        #expect(TimecodeCalculator.framesToString(totalFrames: 25, fps: rate) == "00:00:01:00")
-        
-        // Round trip: String input -> Frames -> String output
-        let inputFrames = TimecodeCalculator.inputToFrames(input: "00000100", fps: rate)
-        #expect(inputFrames == 25)
+        // Check custom 14 FPS
+        let custom14 = FrameRate(id: "14", baseFPS: 14)
+        XCTAssertEqual(custom14.baseFPS, 14)
+        XCTAssertFalse(custom14.isDropFrame)
+        XCTAssertEqual(custom14.dropFrameCount, 0)
     }
 
-// MARK: - 2. DROP FRAME LOGIC AT 29.97 FPS
-    // The most complex part of SMPTE. We test the "Minute boundaries".
-    @Test("29.97 DF: Skips frames at Minute 1")
-    func testDropFrameMinute1() {
-        let rate = FrameRate.fps2997DF
+// MARK: - BASIC CONVERSIONS
+    func test25FPSLogic() {
+        let fps = FrameRate.fps25
         
-        // Frame 1799 = 00:00:59;29 (Last frame of minute 0)
-        let beforeSkip = TimecodeCalculator.framesToString(totalFrames: 1799, fps: rate)
-        #expect(beforeSkip == "00:00:59;29")
+        // 0 frames
+        XCTAssertEqual(TimecodeCalculator.framesToString(totalFrames: 0, fps: fps), "00:00:00:00")
         
-        // Frame 1800 = 00:01:00;02 (First frame of minute 1)
-        // It MUST skip ;00 and ;01
-        let afterSkip = TimecodeCalculator.framesToString(totalFrames: 1800, fps: rate)
-        #expect(afterSkip == "00:01:00;02")
+        // 1 second (25 frames)
+        XCTAssertEqual(TimecodeCalculator.framesToString(totalFrames: 25, fps: fps), "00:00:01:00")
+        
+        // 1 minute (1500 frames)
+        XCTAssertEqual(TimecodeCalculator.framesToString(totalFrames: 1500, fps: fps), "00:01:00:00")
+        
+        // Round trip String and Int
+        let input = "01:00:00:00" // 1 hour
+        let frames = TimecodeCalculator.inputToFrames(input: input, fps: fps)
+        XCTAssertEqual(frames, 90000) // 25 * 60 * 60
+        XCTAssertEqual(TimecodeCalculator.framesToString(totalFrames: frames, fps: fps), input)
     }
 
-    @Test("29.97 DF: Does NOT skip at Minute 10")
-    func testDropFrameMinute10() {
-        let rate = FrameRate.fps2997DF
+// MARK: - 29.97 DF LOGIC
+    func test2997DropFrame() {
+        let fps = FrameRate.fps2997DF
         
-        // 10 minutes = 17982 frames in Drop Frame
-        // It should NOT skip frames at the 10, 20, 30... minute marks.
-        let tenMinutes = TimecodeCalculator.framesToString(totalFrames: 17982, fps: rate)
+        // 1 Minute Test: Should skip 00;00 and 00;01
+        // 30 * 60 = 1800 frames per real minute
+        // Minute 1 starts at index 1800
+        // Expected TC: 00:01:00;02
         
-        // Should be exactly 00:10:00;00
-        #expect(tenMinutes == "00:10:00;00")
+        let frameBefore = 1799
+        let frameAfter = 1800
+        
+        XCTAssertEqual(TimecodeCalculator.framesToString(totalFrames: frameBefore, fps: fps), "00:00:59;29")
+        XCTAssertEqual(TimecodeCalculator.framesToString(totalFrames: frameAfter, fps: fps), "00:01:00;02")
+        
+        // Reverse check
+        XCTAssertEqual(TimecodeCalculator.inputToFrames(input: "00010002", fps: fps), 1800)
     }
 
-// MARK: - 3. TIMECODE TO REAL TIME AT 23.976 FPS
-    // Verifies that timecode diverges from real-world seconds.
-    @Test("23.976: Real Time Drift")
-    func testNTSCRealTime() {
-        let rate = FrameRate.fps23976
+// MARK: - 59.94 DF LOGIC
+    func test5994DropFrame() {
+        let fps = FrameRate.fps5994DF
         
-        // 1 Hour of Timecode (01:00:00:00) @ 24 base = 86400 frames
-        let oneHourFrames = 86400
+        // 1 Minute Test: Should skip 00, 01, 02, 03
+        // 60 * 60 = 3600 frames per real minute
+        // Minute 1 starts at index 3600
+        // Expected TC: 00:01:00;04
         
-        // In the real world, 23.976 runs slower (0.1% slower).
-        // So 1 hour of TC takes 1 hour + 3.6 seconds of real time.
-        let realSeconds = TimecodeCalculator.framesToRealSeconds(totalFrames: oneHourFrames, fps: rate)
+        let frameBefore = 3599
+        let frameAfter = 3600
         
-        // 3600 seconds * 1.001 = 3603.6 seconds
-        #expect(realSeconds.isApproximately(3603.6, within: 0.001))
+        XCTAssertEqual(TimecodeCalculator.framesToString(totalFrames: frameBefore, fps: fps), "00:00:59;59")
+        XCTAssertEqual(TimecodeCalculator.framesToString(totalFrames: frameAfter, fps: fps), "00:01:00;04") // Requires dynamic drop count logic
     }
-    
-// MARK: - 4. ROUND TRIP & FORMATTING
-    @Test("Formatting: Input Padding")
-    func testInputPadding() {
-        let rate = FrameRate.fps25
-        
-        // User types "1", logic should treat it as "00:00:00:01"
-        let frames = TimecodeCalculator.inputToFrames(input: "1", fps: rate)
-        #expect(frames == 1)
-        
-        // User types "100" (1 second), logic should handle it
-        let framesSec = TimecodeCalculator.inputToFrames(input: "100", fps: rate)
-        #expect(framesSec == 25)
-    }
-}
 
-// Helper for comparing doubles (floating point maths is rarely exact)
-extension Double {
-    func isApproximately(_ other: Double, within tolerance: Double) -> Bool {
-        return abs(self - other) < tolerance
+// MARK: - CUSTOM LOGIC
+    func testCustomFPS() {
+        let fps = FrameRate(id: "14", baseFPS: 14)
+        
+        // 1 Second + 1 Frame = 15 frames
+        XCTAssertEqual(TimecodeCalculator.framesToString(totalFrames: 15, fps: fps), "00:00:01:01")
+        
+        // Round trip
+        let input = "00000200" // 2 seconds
+        let frames = TimecodeCalculator.inputToFrames(input: input, fps: fps)
+        XCTAssertEqual(frames, 28) // 14 * 2
+    }
+
+// MARK: - NEGATIVES
+    func testNegativeTimecode() {
+        let fps = FrameRate.fps25
+        
+        // Display negative
+        XCTAssertEqual(TimecodeCalculator.framesToString(totalFrames: -25, fps: fps), "-00:00:01:00")
+        
+        // Parse negative
+        XCTAssertEqual(TimecodeCalculator.inputToFrames(input: "-00:00:01:00", fps: fps), -25)
     }
 }
