@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "D6E4BE9C-9ECF-435C-89F5-742EB2BB6FE7",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:PostCode.xcodeproj",
+      "identifier" : "B08F44732F11DFDA00B52D8A",
+      "name" : "PostCode"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:PostCode.xcodeproj",
+        "identifier" : "B08F44802F11DFDB00B52D8A",
+        "name" : "PostCodeTests"
+      }
+    }
+  ],
+  "version" : 1
+}

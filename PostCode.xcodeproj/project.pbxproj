@@ -17,6 +17,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B07DE3DD2F1AFF9F00FD664C /* PostCode.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = PostCode.xctestplan; sourceTree = "<group>"; };
 		B08F44742F11DFDA00B52D8A /* PostCode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PostCode.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B08F44812F11DFDB00B52D8A /* PostCodeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PostCodeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -26,8 +27,16 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				PostCodeTests.swift,
 			);
 			target = B08F44732F11DFDA00B52D8A /* PostCode */;
+		};
+		B07DE3DC2F1AFF1000FD664C /* Exceptions for "PostCode" folder in "PostCodeTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				PostCodeTests.swift,
+			);
+			target = B08F44802F11DFDB00B52D8A /* PostCodeTests */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -36,13 +45,9 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				B05F2C2F2F18E44500107CED /* Exceptions for "PostCode" folder in "PostCode" target */,
+				B07DE3DC2F1AFF1000FD664C /* Exceptions for "PostCode" folder in "PostCodeTests" target */,
 			);
 			path = PostCode;
-			sourceTree = "<group>";
-		};
-		B08F44842F11DFDB00B52D8A /* PostCodeTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PostCodeTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -64,8 +69,8 @@
 		B08F446B2F11DFDA00B52D8A = {
 			isa = PBXGroup;
 			children = (
+				B07DE3DD2F1AFF9F00FD664C /* PostCode.xctestplan */,
 				B08F44762F11DFDA00B52D8A /* PostCode */,
-				B08F44842F11DFDB00B52D8A /* PostCodeTests */,
 				B08F44752F11DFDA00B52D8A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -112,9 +117,6 @@
 			);
 			dependencies = (
 				B08F44832F11DFDB00B52D8A /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				B08F44842F11DFDB00B52D8A /* PostCodeTests */,
 			);
 			name = PostCodeTests;
 			productName = PostCodeTests;
@@ -256,6 +258,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -312,6 +315,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -321,6 +325,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = RV65KD7NWB;
@@ -332,6 +337,8 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = "";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -342,6 +349,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = McLean.PostCode;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -357,6 +365,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = RV65KD7NWB;
@@ -368,6 +377,8 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = "";
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -378,6 +389,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = McLean.PostCode;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;

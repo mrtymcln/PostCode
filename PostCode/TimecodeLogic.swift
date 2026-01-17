@@ -1,84 +1,139 @@
 import Foundation
 
-// MARK: - ENUMS & DATA MODELS
-enum CalcOperation {
-    case add, subtract, multiply, divide, none
+// MARK: - SHARED MODELS
+
+struct AppStateSnapshot: Codable, Sendable {
+    var mode: AppMode
+    var isFramesMode: Bool
+    
+    // Calculator State
+    var calcFrameRate: FrameRate
+    var inputString: String
+    var tickerTape: [String]
+    var accumulatedFrames: Int
+    var pendingOperation: CalcOperation
+    
+    // TRT State
+    var trtFrameRate: FrameRate
+    var batchList: [BatchEntry]
+    var trtInString: String
+    var trtOutString: String
+    
+    // Converter State
+    var convInputString: String
+    var convSourceRate: FrameRate
+    var convDestRate: FrameRate
 }
 
-enum AppMode {
-    case calculator
-    case trt
-    case converter
+enum AppMode: String, Codable, CaseIterable, Sendable {
+    case calculator, trt, converter
 }
 
-enum TrtField {
-    case inPoint
-    case outPoint
+enum CalcOperation: String, Codable, Sendable {
+    case none, add, subtract, multiply, divide
 }
 
-struct BatchEntry: Identifiable, Hashable {
-    let id = UUID()
+struct BatchEntry: Identifiable, Codable, Hashable, Sendable {
+    var id = UUID()
     let inPoint: String
     let outPoint: String
     let durationFrames: Int
     let durationString: String
 }
 
-// MARK: - FRAME RATE DEFINITIONS
-struct FrameRate: Hashable, Identifiable, RawRepresentable, Codable {
-    
-    let id: String
-    let baseFPS: Int
-    let isDropFrame: Bool
-    let rateMultiplier: Double
-    
-    var separator: String { isDropFrame ? ";" : ":" }
-    var frameDigits: Int { return baseFPS > 99 ? 3 : 2 }
-    
-    var dropFrameCount: Int {
-        guard isDropFrame else { return 0 }
-        return baseFPS == 60 ? 4 : 2
-    }
-
-    // RawRepresentable implementation for saving to UserDefaults
-    public var rawValue: String { "\(id)|\(baseFPS)|\(isDropFrame)|\(rateMultiplier)" }
-    
-    public init?(rawValue: String) {
-        let components = rawValue.split(separator: "|")
-        guard components.count >= 3 else { return nil }
-        let loadedId = String(components[0])
-        let loadedBase = Int(components[1]) ?? 25
-        let loadedDrop = String(components[2]) == "true"
-        let loadedMult = components.count > 3 ? (Double(components[3]) ?? 1.0) : 1.0
-        self = FrameRate(id: loadedId, baseFPS: loadedBase, isDropFrame: loadedDrop, rateMultiplier: loadedMult)
-    }
-    
-    init(id: String, baseFPS: Int, isDropFrame: Bool = false, rateMultiplier: Double = 1.0) {
-        self.id = id
-        self.baseFPS = baseFPS
-        self.isDropFrame = isDropFrame
-        self.rateMultiplier = rateMultiplier
-    }
-    
-    // FPS PRESETS
-    static let fps23976   = FrameRate(id: "23.976", baseFPS: 24, rateMultiplier: 1.001)
-    static let fps24      = FrameRate(id: "24", baseFPS: 24)
-    static let fps25      = FrameRate(id: "25", baseFPS: 25)
-    static let fps2997    = FrameRate(id: "29.97 NDF", baseFPS: 30, rateMultiplier: 1.001)
-    static let fps2997DF  = FrameRate(id: "29.97 DF", baseFPS: 30, isDropFrame: true, rateMultiplier: 1.001)
-    static let fps30      = FrameRate(id: "30", baseFPS: 30)
-    static let fps50      = FrameRate(id: "50", baseFPS: 50)
-    static let fps5994    = FrameRate(id: "59.94 NDF", baseFPS: 60, rateMultiplier: 1.001)
-    static let fps5994DF  = FrameRate(id: "59.94 DF", baseFPS: 60, isDropFrame: true, rateMultiplier: 1.001)
-    static let fps60      = FrameRate(id: "60", baseFPS: 60)
-    
-    static let allCases: [FrameRate] = [
-        .fps23976, .fps24, .fps25, .fps2997, .fps2997DF, .fps30,
-        .fps50, .fps5994, .fps5994DF, .fps60
-    ]
+enum TrtField: Sendable {
+    case inPoint, outPoint
 }
 
-// MARK: - MATHS LOGIC
+// MARK: - FRAME RATE LOGIC
+
+enum FrameRate: Hashable, Codable, Identifiable, CaseIterable, Sendable {
+    case fps23976
+    case fps24
+    case fps25
+    case fps2997
+    case fps2997Drop
+    case fps30
+    case fps50
+    case fps5994
+    case fps5994Drop
+    case fps60
+    case custom(Double)
+    
+    static var allCases: [FrameRate] {
+        [.fps23976, .fps24, .fps25, .fps2997, .fps2997Drop, .fps30, .fps50, .fps5994, .fps5994Drop, .fps60]
+    }
+    
+    var id: String {
+        switch self {
+        case .fps23976: return "23.976 NDF"
+        case .fps24: return "24 NDF"
+        case .fps25: return "25 NDF"
+        case .fps2997: return "29.97 NDF"
+        case .fps2997Drop: return "29.97 DF"
+        case .fps30: return "30 NDF"
+        case .fps50: return "50 NDF"
+        case .fps5994: return "59.94 NDF"
+        case .fps5994Drop: return "59.94 DF"
+        case .fps60: return "60 NDF"
+        case .custom(let val):
+            let formatter = NumberFormatter()
+            formatter.minimumFractionDigits = 0
+            formatter.maximumFractionDigits = 3
+            let numStr = formatter.string(from: NSNumber(value: val)) ?? "\(val)"
+            return "\(numStr) Custom"
+        }
+    }
+    
+    // Core Math Properties
+    var baseFPS: Int {
+        switch self {
+        case .fps23976: return 24
+        case .fps24: return 24
+        case .fps25: return 25
+        case .fps2997, .fps2997Drop: return 30
+        case .fps30: return 30
+        case .fps50: return 50
+        case .fps5994, .fps5994Drop: return 60
+        case .fps60: return 60
+        case .custom(let val): return Int(val.rounded())
+        }
+    }
+    
+    var isDropFrame: Bool {
+        switch self {
+        case .fps2997Drop, .fps5994Drop: return true
+        default: return false
+        }
+    }
+    
+    var rateMultiplier: Double {
+        switch self {
+        case .fps23976, .fps2997, .fps2997Drop, .fps5994, .fps5994Drop:
+            return 1.001
+        default:
+            return 1.0
+        }
+    }
+    
+    var frameDigits: Int {
+        return (baseFPS > 99) ? 3 : 2
+    }
+    
+    var separator: String {
+        return isDropFrame ? ";" : ":"
+    }
+    
+    var dropFrameCount: Int {
+        switch self {
+        case .fps2997Drop: return 2
+        case .fps5994Drop: return 4
+        default: return 0
+        }
+    }
+}
+
+// MARK: - MATH LOGIC
 struct TimecodeCalculator {
     
     static func framesToString(totalFrames: Int, fps: FrameRate) -> String {
@@ -87,23 +142,35 @@ struct TimecodeCalculator {
         let base = fps.baseFPS
         guard base > 0 else { return "00:00:00:00" }
         
-        // Standard SMPTE Drop Frame Algorithm
+        // --- FIXED DROP FRAME ALGORITHM ---
         if fps.isDropFrame {
-            let drops = fps.dropFrameCount
-            let framesPer10Min = (base * 600) - (drops * 9)
-            let framesPerRealMin = (base * 60) - drops
+            let dropFrames = fps.dropFrameCount
+            let framesPerMin = base * 60
+            let framesPer10Min = framesPerMin * 10
             
-            let D = frames / framesPer10Min
-            let M = frames % framesPer10Min
+            // Calculate how many drop frames occur in 10 minutes
+            // e.g. 29.97DF: 1800 * 10 = 18000. Actual drops = 9 * 2 = 18.
+            // 10 mins = 17982 frames.
+            let framesPer10MinDrop = framesPer10Min - (9 * dropFrames)
             
-            // If the remainder is greater than 'drops', we are not in the first minute of the block
-            // We calculate how many minutes passed and add drops accordingly.
-            if M > drops {
-                frames += (drops * 9 * D) + drops * ((M - drops) / framesPerRealMin)
+            let D = frames / framesPer10MinDrop
+            let M = frames % framesPer10MinDrop
+            
+            // If remainder > dropFrames, we are NOT in the first "clean" minute of the 10-block
+            // We need to add back the dropped frames for the subsequent minutes
+            if M > dropFrames {
+                // The tricky part: The first minute of a 10-min block has NO drops.
+                // The remaining 9 minutes DO have drops.
+                // We shift the frame count forward to skip the "illegal" numbers (;00, ;01)
+                
+                // Adjust M by subtracting the first drops, then divide by frames-per-minute (minus drops)
+                frames += (dropFrames * 9 * D) + dropFrames * ((M - dropFrames) / (framesPerMin - dropFrames))
             } else {
-                frames += (drops * 9 * D)
+                // We are in the clean part or exact boundary
+                frames += dropFrames * 9 * D
             }
         }
+        // ----------------------------------
 
         let f = frames % base
         let totalSeconds = frames / base
@@ -135,12 +202,20 @@ struct TimecodeCalculator {
         
         var totalFrames = (h * 3600 + m * 60 + s) * fps.baseFPS + f
 
+        // --- FIXED DROP FRAME REVERSE LOGIC ---
         if fps.isDropFrame {
             let totalMinutes = h * 60 + m
             let drops = fps.dropFrameCount
-            let dropFrames = (totalMinutes - (totalMinutes / 10)) * drops
+            
+            // Calculate how many drops have happened up to this minute total
+            // Drops happen every minute EXCEPT every 10th minute.
+            let numDropEvents = totalMinutes - (totalMinutes / 10)
+            let dropFrames = numDropEvents * drops
+            
             totalFrames -= dropFrames
         }
+        // --------------------------------------
+        
         return input.contains("-") ? -totalFrames : totalFrames
     }
     
