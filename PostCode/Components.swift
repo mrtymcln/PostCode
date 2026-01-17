@@ -187,17 +187,19 @@ struct WelcomeView: View {
 
             VStack {
                 Divider()
-                Button("Continue") { dismiss() }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.blue)
-                    .cornerRadius(12)
-                    .padding(.horizontal)
-                    .padding(.vertical, 16)
+                Button(action: { dismiss() }) {
+                    Text("Continue")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 16)
             }
-            .background(Color(UIColor.systemBackground))  // Ensures no transparent overlap
+            .background(Color(UIColor.systemBackground))
         }
     }
 }

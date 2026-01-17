@@ -5,20 +5,20 @@ import Foundation
 struct AppStateSnapshot: Codable, Sendable {
     var mode: AppMode
     var isFramesMode: Bool
-    
+
     // Calculator State
     var calcFrameRate: FrameRate
     var inputString: String
     var tickerTape: [String]
     var accumulatedFrames: Int
     var pendingOperation: CalcOperation
-    
+
     // TRT State
     var trtFrameRate: FrameRate
     var batchList: [BatchEntry]
     var trtInString: String
     var trtOutString: String
-    
+
     // Converter State
     var convInputString: String
     var convSourceRate: FrameRate
@@ -59,33 +59,37 @@ enum FrameRate: Hashable, Codable, Identifiable, CaseIterable, Sendable {
     case fps5994Drop
     case fps60
     case custom(Double)
-    
+
     static var allCases: [FrameRate] {
-        [.fps23976, .fps24, .fps25, .fps2997, .fps2997Drop, .fps30, .fps50, .fps5994, .fps5994Drop, .fps60]
+        [
+            .fps23976, .fps24, .fps25, .fps2997, .fps2997Drop, .fps30, .fps50,
+            .fps5994, .fps5994Drop, .fps60,
+        ]
     }
-    
+
     var id: String {
         switch self {
-        case .fps23976: return "23.976 NDF"
-        case .fps24: return "24 NDF"
-        case .fps25: return "25 NDF"
+        case .fps23976: return "23.976"
+        case .fps24: return "24"
+        case .fps25: return "25"
         case .fps2997: return "29.97 NDF"
         case .fps2997Drop: return "29.97 DF"
-        case .fps30: return "30 NDF"
-        case .fps50: return "50 NDF"
+        case .fps30: return "30"
+        case .fps50: return "50"
         case .fps5994: return "59.94 NDF"
         case .fps5994Drop: return "59.94 DF"
-        case .fps60: return "60 NDF"
+        case .fps60: return "60"
         case .custom(let val):
             let formatter = NumberFormatter()
             formatter.minimumFractionDigits = 0
             formatter.maximumFractionDigits = 3
-            let numStr = formatter.string(from: NSNumber(value: val)) ?? "\(val)"
-            return "\(numStr) Custom"
+            let numStr =
+                formatter.string(from: NSNumber(value: val)) ?? "\(val)"
+            return "\(numStr)"
         }
     }
-    
-    // Core Math Properties
+
+    // Core Maths Properties
     var baseFPS: Int {
         switch self {
         case .fps23976: return 24
@@ -99,14 +103,14 @@ enum FrameRate: Hashable, Codable, Identifiable, CaseIterable, Sendable {
         case .custom(let val): return Int(val.rounded())
         }
     }
-    
+
     var isDropFrame: Bool {
         switch self {
         case .fps2997Drop, .fps5994Drop: return true
         default: return false
         }
     }
-    
+
     var rateMultiplier: Double {
         switch self {
         case .fps23976, .fps2997, .fps2997Drop, .fps5994, .fps5994Drop:
@@ -115,15 +119,15 @@ enum FrameRate: Hashable, Codable, Identifiable, CaseIterable, Sendable {
             return 1.0
         }
     }
-    
+
     var frameDigits: Int {
         return (baseFPS > 99) ? 3 : 2
     }
-    
+
     var separator: String {
         return isDropFrame ? ";" : ":"
     }
-    
+
     var dropFrameCount: Int {
         switch self {
         case .fps2997Drop: return 2
@@ -133,38 +137,39 @@ enum FrameRate: Hashable, Codable, Identifiable, CaseIterable, Sendable {
     }
 }
 
-// MARK: - MATH LOGIC
+// MARK: - MATHs LOGIC
 struct TimecodeCalculator {
-    
+
     static func framesToString(totalFrames: Int, fps: FrameRate) -> String {
         let isNegative = totalFrames < 0
         var frames = abs(totalFrames)
         let base = fps.baseFPS
         guard base > 0 else { return "00:00:00:00" }
-        
-        // --- FIXED DROP FRAME ALGORITHM ---
+
         if fps.isDropFrame {
             let dropFrames = fps.dropFrameCount
             let framesPerMin = base * 60
             let framesPer10Min = framesPerMin * 10
-            
+
             // Calculate how many drop frames occur in 10 minutes
             // e.g. 29.97DF: 1800 * 10 = 18000. Actual drops = 9 * 2 = 18.
             // 10 mins = 17982 frames.
             let framesPer10MinDrop = framesPer10Min - (9 * dropFrames)
-            
+
             let D = frames / framesPer10MinDrop
             let M = frames % framesPer10MinDrop
-            
+
             // If remainder > dropFrames, we are NOT in the first "clean" minute of the 10-block
             // We need to add back the dropped frames for the subsequent minutes
             if M > dropFrames {
-                // The tricky part: The first minute of a 10-min block has NO drops.
-                // The remaining 9 minutes DO have drops.
+                // The first minute of a 10-min block has no drops.
+                // The remaining 9 minutes do have drops.
                 // We shift the frame count forward to skip the "illegal" numbers (;00, ;01)
-                
+
                 // Adjust M by subtracting the first drops, then divide by frames-per-minute (minus drops)
-                frames += (dropFrames * 9 * D) + dropFrames * ((M - dropFrames) / (framesPerMin - dropFrames))
+                frames +=
+                    (dropFrames * 9 * D) + dropFrames
+                    * ((M - dropFrames) / (framesPerMin - dropFrames))
             } else {
                 // We are in the clean part or exact boundary
                 frames += dropFrames * 9 * D
@@ -177,11 +182,11 @@ struct TimecodeCalculator {
         let s = totalSeconds % 60
         let m = (totalSeconds / 60) % 60
         let h = totalSeconds / 3600
-        
+
         let frameFormat = fps.frameDigits == 3 ? "%03d" : "%02d"
         let formatString = "%02d:%02d:%02d%@\(frameFormat)"
         let timeString = String(format: formatString, h, m, s, fps.separator, f)
-        
+
         return isNegative ? "-\(timeString)" : timeString
     }
 
@@ -190,36 +195,41 @@ struct TimecodeCalculator {
         let numericInput = input.filter("0123456789".contains)
         let fDigits = fps.frameDigits
         let totalLen = 6 + fDigits
-        let padded = String(repeating: "0", count: max(0, totalLen - numericInput.count)) + numericInput
+        let padded =
+            String(repeating: "0", count: max(0, totalLen - numericInput.count))
+            + numericInput
         let digits = Array(padded)
-        
+
         let h = Int(String(digits[0...1])) ?? 0
         let m = Int(String(digits[2...3])) ?? 0
         let s = Int(String(digits[4...5])) ?? 0
         let fStart = 6
         let fEnd = 6 + fDigits - 1
-        let f = (fEnd < digits.count) ? (Int(String(digits[fStart...fEnd])) ?? 0) : 0
-        
+        let f =
+            (fEnd < digits.count)
+            ? (Int(String(digits[fStart...fEnd])) ?? 0) : 0
+
         var totalFrames = (h * 3600 + m * 60 + s) * fps.baseFPS + f
 
         // --- FIXED DROP FRAME REVERSE LOGIC ---
         if fps.isDropFrame {
             let totalMinutes = h * 60 + m
             let drops = fps.dropFrameCount
-            
+
             // Calculate how many drops have happened up to this minute total
             // Drops happen every minute EXCEPT every 10th minute.
             let numDropEvents = totalMinutes - (totalMinutes / 10)
             let dropFrames = numDropEvents * drops
-            
+
             totalFrames -= dropFrames
         }
         // --------------------------------------
-        
+
         return input.contains("-") ? -totalFrames : totalFrames
     }
-    
-    static func framesToRealSeconds(totalFrames: Int, fps: FrameRate) -> Double {
+
+    static func framesToRealSeconds(totalFrames: Int, fps: FrameRate) -> Double
+    {
         let nominalSeconds = Double(totalFrames) / Double(fps.baseFPS)
         return nominalSeconds * fps.rateMultiplier
     }
