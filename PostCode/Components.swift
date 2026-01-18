@@ -1,3 +1,4 @@
+import AudioToolbox
 import SwiftUI
 
 // MARK: - COMPONENTS
@@ -12,8 +13,34 @@ struct CalcButton: View {
     var isActive: Bool = false
     let action: () -> Void
 
+    // Haptic State
+    @State private var feedbackTrigger = false
+
+    // Determine sound based on button type
+    private var soundID: SystemSoundID {
+        if label == "Backspace" || systemImage == "delete.left" {
+            return 1155
+        }
+        if ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "00"].contains(
+            label
+        ) {
+            return 1123
+        }
+        return 1156
+    }
+
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            // Play sound as per button type
+            AudioServicesPlaySystemSound(soundID)
+            
+            // Trigger button haptics
+            feedbackTrigger.toggle()
+            
+            // Perform button action
+            action()
+            
+        }) {
             ZStack {
                 if isActive {
                     Color.white
@@ -38,6 +65,10 @@ struct CalcButton: View {
             .clipShape(Circle())
         }
         .buttonStyle(PlainButtonStyle())
+        .sensoryFeedback(
+            .impact(weight: .light, intensity: 1.0),
+            trigger: feedbackTrigger
+        )
     }
 }
 
@@ -128,7 +159,7 @@ struct WelcomeView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: 10) {
+                VStack(spacing: 20) {
                     Image("AppImage")
                         .resizable()
                         .scaledToFit()
@@ -139,7 +170,7 @@ struct WelcomeView: View {
                     Text("Welcome to PostCode").font(.largeTitle).bold()
                         .multilineTextAlignment(.center)
                     Text("Created by Marty McLean").font(.subheadline).bold()
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white)
 
                     VStack(alignment: .leading, spacing: 10) {
                         FeatureRow(

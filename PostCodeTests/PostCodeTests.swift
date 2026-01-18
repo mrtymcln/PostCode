@@ -4,8 +4,8 @@ import XCTest
 
 final class PostCodeTests: XCTestCase {
 
-    // MARK: - STANDARD LOGIC (25 FPS)
-    
+// MARK: - STANDARD LOGIC (25 FPS)
+
     func test25FPS_Behaviour() {
         verifyFramesRoundTrip(
             frames: 25,
@@ -31,10 +31,10 @@ final class PostCodeTests: XCTestCase {
         )
     }
 
-    // MARK: - DROP FRAME LOGIC (29.97 DF)
-    // Drop 2 frames at the start of every minute, EXCEPT every 10th minute.
-    // Minute 0 (00:00:00:00 -> 00:00:59;29) is a FULL minute (1800 frames).
-    // The first drop happens at the transition to Minute 1 (00:01:00;02).
+// MARK: - DROP FRAME LOGIC (29.97 DF)
+// Drop 2 frames at the start of every minute, except every 10th minute.
+// Minute 0 (00:00:00:00 -> 00:00:59;29) is a FULL minute (1800 frames).
+// The first drop happens at the transition to Minute 1 (00:01:00;02).
 
     func test2997DF_MinuteSkip() {
         // --- MINUTE 0 BOUNDARY ---
@@ -79,8 +79,8 @@ final class PostCodeTests: XCTestCase {
         )
     }
 
-    // MARK: - DROP FRAME LOGIC (59.94 DF)
-    // Drop 4 frames every minute, except every 10th minute.
+// MARK: - DROP FRAME LOGIC (59.94 DF)
+// Drop 4 frames every minute, except every 10th minute.
 
     func test5994DF_Behaviour() {
         // --- MINUTE 0 BOUNDARY ---
@@ -103,8 +103,8 @@ final class PostCodeTests: XCTestCase {
         )
     }
 
-    // MARK: - CUSTOM LOGIC (88 FPS)
-    
+// MARK: - CUSTOM LOGIC (88 FPS)
+
     func test88FPS_Behaviour() {
         let fps88 = FrameRate.custom(88.0)
         verifyFramesRoundTrip(
@@ -119,8 +119,8 @@ final class PostCodeTests: XCTestCase {
         )
     }
 
-    // MARK: - NEGATIVES
-    
+// MARK: - NEGATIVES
+
     func testNegativeBehaviour() {
         verifyFramesRoundTrip(
             frames: -25,
@@ -139,12 +139,12 @@ final class PostCodeTests: XCTestCase {
         XCTAssertEqual(frames, -25, "Negative String Input Failed")
     }
 
-    // MARK: - CALCULATIONS
-    
+// MARK: - CALCULATIONS
+
     func testSampleCalculations() {
         let fps = FrameRate.fps25
 
-        // ADDITION: 01:00:00:00 + 00:00:01:00
+        // ADDITION (01:00:00:00 + 00:00:01:00)
         let f1 = TimecodeCalculator.inputToFrames(input: "01000000", fps: fps)  // 90000
         let f2 = TimecodeCalculator.inputToFrames(input: "00000100", fps: fps)  // 25
         let sum = f1 + f2
@@ -155,7 +155,7 @@ final class PostCodeTests: XCTestCase {
 
         XCTAssertEqual(sumString, "01:00:01:00", "Addition failed")
 
-        // SUBTRACTION: 01:00:00:00 - 00:00:00:01
+        // SUBTRACTION (01:00:00:00 - 00:00:00:01)
         // 90000 - 1 = 89999
         let sub = f1 - 1
         let subString = TimecodeCalculator.framesToString(
@@ -166,7 +166,7 @@ final class PostCodeTests: XCTestCase {
         XCTAssertEqual(subString, "00:59:59:24", "Subtraction rollover failed")
     }
 
-    // MARK: - HELPERS
+// MARK: - HELPERS
 
     // Frames to String to Frames
     func verifyFramesRoundTrip(

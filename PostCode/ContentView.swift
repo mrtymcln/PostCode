@@ -3,16 +3,15 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var vm: AppViewModel
     @FocusState private var isViewFocused: Bool
-
-    // Local state for the Easter Egg
     @State private var showBolt = false
 
-    // Constants
+// MARK: - CONSTANTS
+
     private let buttonSpacing: CGFloat = 12
-    private let colourDarkGrey = Color(red: 0.2, green: 0.2, blue: 0.2)
-    private let colourLightGrey = Color(red: 0.65, green: 0.65, blue: 0.65)
-    private let colourOrange = Color.orange
-    private let colourGreen = Color(red: 0.0, green: 0.8, blue: 0.0)
+    private let colourDarkGrey = Color(white: 0.2)
+    private let colourLightGrey = Color(white: 0.647)
+    private let colourOrange = Color(red: 1.0, green: 0.584, blue: 0.0)
+    private let colourGreen = Color(red: 0.0, green: 1.0, blue: 0.0)
 
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
@@ -32,9 +31,12 @@ struct ContentView: View {
             .focused($isViewFocused)
             .onKeyPress { press in handleHardwareKey(press) }
         }
+        .ignoresSafeArea(.keyboard)
         .sheet(isPresented: $vm.showWelcomeSheet) { WelcomeView() }
         .alert("Custom frame rate", isPresented: $vm.showCustomFpsAlert) {
             TextField(" 1-999", text: $vm.customFpsInput)
+                .keyboardType(.decimalPad)
+
             Button("Cancel", role: .cancel) {}
             Button("OK") {
                 // Check for Easter Egg
@@ -70,12 +72,12 @@ struct ContentView: View {
 
 // MARK: - SUBVIEWS
 
-extension ContentView {
+    extension ContentView {
 
     private var mainDisplaySize: CGFloat { isPad ? 80 : 42 }
     private var tapeFontSize: CGFloat { isPad ? 32 : 24 }
 
-    // MARK: - IPAD LAYOUT
+// MARK: - IPAD LAYOUT
 
     private func ipadLayout(width: CGFloat, height: CGFloat) -> some View {
         let isLandscape = width > height
@@ -136,7 +138,7 @@ extension ContentView {
                                     )
                             }
 
-                            // 2.2.1 KEYPAD
+                        // 2.3 KEYPAD
                             let keypadW = min(contentWidth * 0.40, 420)
                             keypadLayout(width: keypadW)
                                 .frame(width: keypadW)
@@ -146,7 +148,8 @@ extension ContentView {
                         .background(Color.black)
                     }
                 } else {
-                    // 3. PORTRAIT (Disabled but left old code)
+
+            // 3. PORTRAIT (Disabled but kept the code)
                     VStack(spacing: 0) {
                         // 3.1 TICKER TAPE
                         ZStack {
@@ -185,7 +188,7 @@ extension ContentView {
                                     .padding(.horizontal, 20)
                             }
 
-                            // 3.3 KEYPAD
+                        // 3.3 KEYPAD
                             let keypadW = min(contentWidth, 420)
                             keypadLayout(width: keypadW)
                                 .frame(width: keypadW)
@@ -237,7 +240,7 @@ extension ContentView {
         }
     }
 
-    // MARK: - IPHONE LAYOUT
+// MARK: - IPHONE LAYOUT
 
     private func iphoneLayout(width: CGFloat, height: CGFloat) -> some View {
         VStack(spacing: 0) {
@@ -270,7 +273,7 @@ extension ContentView {
     // 1. HEADER
     private var headerView: some View {
         HStack(spacing: 8) {
-            // Mode toggle for iPhone, as iPad uses Sidebar
+            // Mode toggle for iPhone only, as iPad uses Sidebar
             if !isPad {
                 Button(action: { withAnimation { vm.toggleAppMode() } }) {
                     PillLabel(
@@ -530,7 +533,7 @@ extension ContentView {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - DISPLAY VIEWS
+// MARK: - DISPLAY VIEWS
 
     private var tickerTapeView: some View {
         ScrollView {
@@ -698,6 +701,8 @@ extension ContentView {
         }
     }
 
+// MARK: - INPUT COMPONENT
+
     private var trtInputArea: some View {
         HStack(spacing: 12) {
             TRTInputField(
@@ -729,6 +734,8 @@ extension ContentView {
         .cornerRadius(12)
     }
 
+// MARK: - HARDWARE KEYBOARD
+
     func handleHardwareKey(_ press: KeyPress) -> KeyPress.Result {
         let char = press.characters
         if vm.mode == .calculator {
@@ -757,6 +764,10 @@ extension ContentView {
             }
             if char == "c" || char == "C" {
                 vm.clearAll()
+                return .handled
+            }
+            if char == "a" || char == "A" {
+                vm.recallResult()
                 return .handled
             }
         } else if vm.mode == .converter {

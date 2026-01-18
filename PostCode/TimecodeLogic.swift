@@ -137,7 +137,8 @@ enum FrameRate: Hashable, Codable, Identifiable, CaseIterable, Sendable {
     }
 }
 
-// MARK: - MATHs LOGIC
+// MARK: - MATHS LOGIC
+
 struct TimecodeCalculator {
 
     static func framesToString(totalFrames: Int, fps: FrameRate) -> String {
@@ -152,8 +153,8 @@ struct TimecodeCalculator {
             let framesPer10Min = framesPerMin * 10
 
             // Calculate how many drop frames occur in 10 minutes
-            // e.g. 29.97DF: 1800 * 10 = 18000. Actual drops = 9 * 2 = 18.
-            // 10 mins = 17982 frames.
+            // e.g. 29.97DF: 1800 * 10 = 18000. Actual drops = 9 * 2 = 18
+            // 10 mins = 17982 frames
             let framesPer10MinDrop = framesPer10Min - (9 * dropFrames)
 
             let D = frames / framesPer10MinDrop
@@ -162,8 +163,8 @@ struct TimecodeCalculator {
             // If remainder > dropFrames, we are NOT in the first "clean" minute of the 10-block
             // We need to add back the dropped frames for the subsequent minutes
             if M > dropFrames {
-                // The first minute of a 10-min block has no drops.
-                // The remaining 9 minutes do have drops.
+                // The first minute of a 10-min block has no drops
+                // The remaining 9 minutes do have drops
                 // We shift the frame count forward to skip the "illegal" numbers (;00, ;01)
 
                 // Adjust M by subtracting the first drops, then divide by frames-per-minute (minus drops)
@@ -217,7 +218,7 @@ struct TimecodeCalculator {
             let drops = fps.dropFrameCount
 
             // Calculate how many drops have happened up to this minute total
-            // Drops happen every minute EXCEPT every 10th minute.
+            // Drops happen every minute EXCEPT every 10th minute
             let numDropEvents = totalMinutes - (totalMinutes / 10)
             let dropFrames = numDropEvents * drops
 

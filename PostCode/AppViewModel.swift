@@ -1,12 +1,12 @@
 import Combine
 import SwiftUI
 
-// all Data Models (AppStateSnapshot, AppMode, etc.) are in TimecodeLogic.swift
+// all data models (AppStateSnapshot, AppMode, etc.) are in TimecodeLogic.swift
 
 @MainActor
 class AppViewModel: ObservableObject {
 
-    // MARK: - PERSISTENT SETTINGS
+// MARK: - PERSISTENT SETTINGS
 
     @Published var lastRunVersion: String {
         didSet {
@@ -14,7 +14,7 @@ class AppViewModel: ObservableObject {
         }
     }
 
-    // MARK: - UI STATE
+// MARK: - UI STATE
 
     @Published var mode: AppMode = .calculator
     @Published var showWelcomeSheet = false
@@ -24,7 +24,7 @@ class AppViewModel: ObservableObject {
     @Published var customFpsInput = ""
     @Published var isFramesMode = false
 
-    // MARK: - CALCULATOR DATA
+// MARK: - CALCULATOR DATA
 
     @Published var calcFrameRate: FrameRate = .fps25  // Independent
     @Published var inputString = ""
@@ -33,7 +33,7 @@ class AppViewModel: ObservableObject {
     @Published var pendingOperation: CalcOperation = .none
     var lastWasEquals = false
 
-    // MARK: - TRT DATA
+// MARK: - TRT DATA
 
     @Published var trtFrameRate: FrameRate = .fps25  // Independent
     @Published var batchList: [BatchEntry] = []
@@ -41,13 +41,13 @@ class AppViewModel: ObservableObject {
     @Published var trtOutString = ""
     @Published var activeTrtField: TrtField = .inPoint
 
-    // MARK: - CONVERTER DATA
+// MARK: - CONVERTER DATA
 
     @Published var convInputString = ""
     @Published var convSourceRate: FrameRate = .fps25  // Independent
     @Published var convDestRate: FrameRate = .fps25  // Independent
 
-    // MARK: - INIT
+// MARK: - INIT
 
     init() {
         self.lastRunVersion =
@@ -63,9 +63,9 @@ class AppViewModel: ObservableObject {
         checkForUpdate()
     }
 
-    // MARK: - COMPUTED HELPERS
+// MARK: - COMPUTED HELPERS
+// Returns the frame rate for the current app mode
 
-    // Returns the Frame Rate for the current app mode
     var activeFrameRate: FrameRate {
         switch mode {
         case .calculator: return calcFrameRate
@@ -158,7 +158,7 @@ class AppViewModel: ObservableObject {
         }
     }
 
-    // MARK: - ACTIONS
+// MARK: - ACTIONS
 
     func checkForUpdate() {
         guard
@@ -169,13 +169,13 @@ class AppViewModel: ObservableObject {
 
         if current != lastRunVersion {
             showWelcomeSheet = true
-            // Update the ersion so the sheet doesn't show again next launch
+            // Update the version so the sheet does not show again
             lastRunVersion = current
         }
     }
 
     func changeFrameRate(to newRate: FrameRate) {
-        // Only update the rate for the current app mode
+        // Only update the frame rate for the current app mode
         switch mode {
         case .calculator:
             let old = calcFrameRate
@@ -320,7 +320,7 @@ class AppViewModel: ObservableObject {
         }
     }
 
-    // MARK: - INPUT LOGIC
+// MARK: - INPUT LOGIC
 
     func addDigit(_ digit: String) {
         Task {
@@ -386,7 +386,7 @@ class AppViewModel: ObservableObject {
         }
     }
 
-    // MARK: - LOGIC HELPERS
+// MARK: - LOGIC HELPERS
 
     func getFormattedActiveDisplay() -> String {
         if inputString.isEmpty { return isFramesMode ? "0" : formatInput("") }
@@ -408,7 +408,7 @@ class AppViewModel: ObservableObject {
         let isNegative = cleanRaw.hasPrefix("-")
         if isNegative { cleanRaw.removeFirst() }
 
-        // Dynamic Frame Rate Selection
+        // Dynamic frame rate selection
         let useFps: FrameRate
         if let specificFps = fps {
             useFps = specificFps
@@ -437,7 +437,7 @@ class AppViewModel: ObservableObject {
         return isNegative ? "-" + text : text
     }
 
-    // MARK: - CALCULATOR LOGIC
+// MARK: - CALCULATOR LOGIC
 
     func setOperation(_ op: CalcOperation) {
         Task {
@@ -551,7 +551,7 @@ class AppViewModel: ObservableObject {
         }
     }
 
-    // MARK: - TRT LOGIC
+// MARK: - TRT LOGIC
 
     func addBatchEntry() {
         Task {
@@ -614,7 +614,7 @@ class AppViewModel: ObservableObject {
         tickerTape = newTape
     }
 
-    // MARK: - PERSISTENCE
+// MARK: - PERSISTENCE
 
     private func getDocumentsDirectory() -> URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[
