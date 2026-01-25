@@ -1,7 +1,7 @@
 import Combine
 import SwiftUI
 
-// all data models (AppStateSnapshot, AppMode, etc.) are in TimecodeLogic.swift
+// all data models (AppStateSnapshot, AppMode, etc.) are in TimecodeLogic
 
 @MainActor
 class AppViewModel: ObservableObject {
@@ -16,7 +16,7 @@ class AppViewModel: ObservableObject {
 
 // MARK: - UI STATE
 
-    @Published var mode: AppMode = .calculator
+    @Published var mode: AppMode = .calc
     @Published var showWelcomeSheet = false
     @Published var showCustomFpsAlert = false
     @Published var showClearAlert = false
@@ -24,28 +24,28 @@ class AppViewModel: ObservableObject {
     @Published var customFpsInput = ""
     @Published var isFramesMode = false
 
-// MARK: - CALCULATOR DATA
+// MARK: - CALC DATA
 
-    @Published var calcFrameRate: FrameRate = .fps25  // Independent
+    @Published var calcFrameRate: FrameRate = .fps25
     @Published var inputString = ""
     @Published var tickerTape: [String] = []
     @Published var accumulatedFrames = 0
     @Published var pendingOperation: CalcOperation = .none
     var lastWasEquals = false
 
-// MARK: - TRT DATA
+// MARK: - RUN DATA
 
-    @Published var trtFrameRate: FrameRate = .fps25  // Independent
-    @Published var batchList: [BatchEntry] = []
-    @Published var trtInString = ""
-    @Published var trtOutString = ""
-    @Published var activeTrtField: TrtField = .inPoint
+    @Published var runFrameRate: FrameRate = .fps25
+    @Published var runList: [Segment] = []
+    @Published var runInString = ""
+    @Published var runOutString = ""
+    @Published var activeRunField: RunField = .inPoint
 
-// MARK: - CONVERTER DATA
+// MARK: - CONV DATA
 
     @Published var convInputString = ""
-    @Published var convSourceRate: FrameRate = .fps25  // Independent
-    @Published var convDestRate: FrameRate = .fps25  // Independent
+    @Published var convSourceRate: FrameRate = .fps25
+    @Published var convDestRate: FrameRate = .fps25
 
 // MARK: - INIT
 
@@ -54,7 +54,7 @@ class AppViewModel: ObservableObject {
             UserDefaults.standard.string(forKey: "lastRunVersion") ?? "0.0.0"
 
         self.calcFrameRate = .fps25
-        self.trtFrameRate = .fps25
+        self.runFrameRate = .fps25
         self.convSourceRate = .fps25
         self.convDestRate = .fps25
 
@@ -68,43 +68,43 @@ class AppViewModel: ObservableObject {
 
     var activeFrameRate: FrameRate {
         switch mode {
-        case .calculator: return calcFrameRate
-        case .trt: return trtFrameRate
-        case .converter: return convSourceRate
+        case .calc: return calcFrameRate
+        case .run: return runFrameRate
+        case .conv: return convSourceRate
         }
     }
 
     func getModeLabel() -> String {
         switch mode {
-        case .calculator: return "Calc"
-        case .trt: return "Run"
-        case .converter: return "Conv"
+        case .calc: return "Calc"
+        case .run: return "Run"
+        case .conv: return "Conv"
         }
     }
 
     func getModeIcon() -> String {
         switch mode {
-        case .calculator: return "plus.circle"
-        case .trt: return "figure.run"
-        case .converter: return "arrow.up.arrow.down"
+        case .calc: return "plus.circle"
+        case .run: return "figure.run"
+        case .conv: return "arrow.up.arrow.down"
         }
     }
 
-    var trtTotalString: String {
-        let totalFrames = batchList.reduce(0) { $0 + $1.durationFrames }
+    var runTotalString: String {
+        let totalFrames = runList.reduce(0) { $0 + $1.durationFrames }
         return TimecodeCalculator.framesToString(
             totalFrames: totalFrames,
-            fps: trtFrameRate
+            fps: runFrameRate
         )
     }
 
-    var trtRealTimeString: String? {
-        guard trtFrameRate.rateMultiplier != 1.0, !trtFrameRate.isDropFrame
+    var runRealTimeString: String? {
+        guard runFrameRate.rateMultiplier != 1.0, !runFrameRate.isDropFrame
         else { return nil }
-        let totalFrames = batchList.reduce(0) { $0 + $1.durationFrames }
+        let totalFrames = runList.reduce(0) { $0 + $1.durationFrames }
         let totalSeconds = TimecodeCalculator.framesToRealSeconds(
             totalFrames: totalFrames,
-            fps: trtFrameRate
+            fps: runFrameRate
         )
         let h = Int(totalSeconds / 3600)
         let m = Int((totalSeconds.truncatingRemainder(dividingBy: 3600)) / 60)
@@ -143,16 +143,16 @@ class AppViewModel: ObservableObject {
 
     var exportText: String {
         switch mode {
-        case .calculator: return tickerTape.joined(separator: "\n")
-        case .trt:
+        case .calc: return tickerTape.joined(separator: "\n")
+        case .run:
             var text =
-                "Total Running Time (@ \(trtFrameRate.id))\n---------------------------\n"
-            for (index, entry) in batchList.enumerated() {
+                "Total Running Time (@ \(runFrameRate.id))\n---------------------------\n"
+            for (index, entry) in runList.enumerated() {
                 text +=
                     "#\(index + 1) IN: \(entry.inPoint) | OUT: \(entry.outPoint) | DUR: \(entry.durationString)\n"
             }
-            return text + "---------------------------\nTRT: \(trtTotalString)"
-        case .converter:
+            return text + "---------------------------\nTRT: \(runTotalString)"
+        case .conv:
             return
                 "Convert: \(getFormattedConvInput()) @ \(convSourceRate.id) -> \(convResultString) @ \(convDestRate.id)"
         }
@@ -169,25 +169,35 @@ class AppViewModel: ObservableObject {
 
         if current != lastRunVersion {
             showWelcomeSheet = true
-            // Update the version so the sheet does not show again
+            // IMPORTANT: We do NOT save 'lastRunVersion = current' here anymore.
+            // If we did, the sheet would only show once, even if the user crashed/quit immediately.
+        }
+    }
+
+    // New function called only when the button is clicked
+    func markWelcomeComplete() {
+        if let current = Bundle.main.infoDictionary?[
+            "CFBundleShortVersionString"
+        ] as? String {
             lastRunVersion = current
         }
+        showWelcomeSheet = false
     }
 
     func changeFrameRate(to newRate: FrameRate) {
         // Only update the frame rate for the current app mode
         switch mode {
-        case .calculator:
+        case .calc:
             let old = calcFrameRate
             calcFrameRate = newRate
             Task {
                 self.convertHistory(from: old, to: newRate)
                 saveState()
             }
-        case .trt:
-            trtFrameRate = newRate
+        case .run:
+            runFrameRate = newRate
             saveState()
-        case .converter:
+        case .conv:
             convSourceRate = newRate
             saveState()
         }
@@ -197,9 +207,9 @@ class AppViewModel: ObservableObject {
         Task {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                 switch mode {
-                case .calculator: mode = .trt
-                case .trt: mode = .converter
-                case .converter: mode = .calculator
+                case .calc: mode = .run
+                case .run: mode = .conv
+                case .conv: mode = .calc
                 }
             }
             saveState()
@@ -219,7 +229,7 @@ class AppViewModel: ObservableObject {
         Task {
             withAnimation {
                 // Convert active input
-                if mode == .calculator && !inputString.isEmpty {
+                if mode == .calc && !inputString.isEmpty {
                     if !isFramesMode {
                         let frames = TimecodeCalculator.inputToFrames(
                             input: inputString,
@@ -238,7 +248,7 @@ class AppViewModel: ObservableObject {
                             if let val = Int(raw) { inputString = "\(val)" }
                         }
                     }
-                } else if mode == .converter && !convInputString.isEmpty {
+                } else if mode == .conv && !convInputString.isEmpty {
                     if !isFramesMode {
                         let f = TimecodeCalculator.inputToFrames(
                             input: convInputString,
@@ -260,7 +270,7 @@ class AppViewModel: ObservableObject {
                 }
 
                 // Update ticker tape
-                if mode == .calculator {
+                if mode == .calc {
                     var newTape: [String] = []
                     for line in tickerTape {
                         if line.count <= 1 && !line.first!.isNumber {
@@ -324,7 +334,7 @@ class AppViewModel: ObservableObject {
 
     func addDigit(_ digit: String) {
         Task {
-            if mode == .calculator {
+            if mode == .calc {
                 if lastWasEquals {
                     inputString = ""
                     accumulatedFrames = 0
@@ -333,14 +343,14 @@ class AppViewModel: ObservableObject {
                 }
                 let limit = isFramesMode ? 12 : (6 + calcFrameRate.frameDigits)
                 if inputString.count < limit { inputString += digit }
-            } else if mode == .trt {
-                let limit = 6 + trtFrameRate.frameDigits
-                if activeTrtField == .inPoint {
-                    if trtInString.count < limit { trtInString += digit }
+            } else if mode == .run {
+                let limit = 6 + runFrameRate.frameDigits
+                if activeRunField == .inPoint {
+                    if runInString.count < limit { runInString += digit }
                 } else {
-                    if trtOutString.count < limit { trtOutString += digit }
+                    if runOutString.count < limit { runOutString += digit }
                 }
-            } else if mode == .converter {
+            } else if mode == .conv {
                 let limit = isFramesMode ? 12 : (6 + convSourceRate.frameDigits)
                 if convInputString.count < limit { convInputString += digit }
             }
@@ -350,15 +360,15 @@ class AppViewModel: ObservableObject {
 
     func backspace() {
         Task {
-            if mode == .calculator {
+            if mode == .calc {
                 if !inputString.isEmpty { inputString.removeLast() }
-            } else if mode == .trt {
-                if activeTrtField == .inPoint {
-                    if !trtInString.isEmpty { trtInString.removeLast() }
+            } else if mode == .run {
+                if activeRunField == .inPoint {
+                    if !runInString.isEmpty { runInString.removeLast() }
                 } else {
-                    if !trtOutString.isEmpty { trtOutString.removeLast() }
+                    if !runOutString.isEmpty { runOutString.removeLast() }
                 }
-            } else if mode == .converter {
+            } else if mode == .conv {
                 if !convInputString.isEmpty { convInputString.removeLast() }
             }
             saveState()
@@ -368,17 +378,17 @@ class AppViewModel: ObservableObject {
     func clearAll() {
         Task {
             withAnimation {
-                if mode == .calculator {
+                if mode == .calc {
                     inputString = ""
                     tickerTape = []
                     accumulatedFrames = 0
                     pendingOperation = .none
                     lastWasEquals = false
-                } else if mode == .trt {
-                    batchList.removeAll()
-                    trtInString = ""
-                    trtOutString = ""
-                } else if mode == .converter {
+                } else if mode == .run {
+                    runList.removeAll()
+                    runInString = ""
+                    runOutString = ""
+                } else if mode == .conv {
                     convInputString = ""
                 }
                 saveState()
@@ -415,9 +425,9 @@ class AppViewModel: ObservableObject {
         } else {
             // Context aware default
             switch mode {
-            case .calculator: useFps = calcFrameRate
-            case .trt: useFps = trtFrameRate
-            case .converter: useFps = convSourceRate
+            case .calc: useFps = calcFrameRate
+            case .run: useFps = runFrameRate
+            case .conv: useFps = convSourceRate
             }
         }
 
@@ -437,7 +447,7 @@ class AppViewModel: ObservableObject {
         return isNegative ? "-" + text : text
     }
 
-// MARK: - CALCULATOR LOGIC
+// MARK: - CALC LOGIC
 
     func setOperation(_ op: CalcOperation) {
         Task {
@@ -551,37 +561,37 @@ class AppViewModel: ObservableObject {
         }
     }
 
-// MARK: - TRT LOGIC
+// MARK: - RUN LOGIC
 
-    func addBatchEntry() {
+    func addSegment() {
         Task {
             let inFrames = TimecodeCalculator.inputToFrames(
-                input: trtInString,
-                fps: trtFrameRate
+                input: runInString,
+                fps: runFrameRate
             )
             let outFrames = TimecodeCalculator.inputToFrames(
-                input: trtOutString,
-                fps: trtFrameRate
+                input: runOutString,
+                fps: runFrameRate
             )
             let dur = (outFrames - inFrames) + 1
 
             if dur > 0 {
                 let durString = TimecodeCalculator.framesToString(
                     totalFrames: dur,
-                    fps: trtFrameRate
+                    fps: runFrameRate
                 )
-                let entry = BatchEntry(
-                    inPoint: formatInput(trtInString, fps: trtFrameRate),
-                    outPoint: formatInput(trtOutString, fps: trtFrameRate),
+                let entry = Segment(
+                    inPoint: formatInput(runInString, fps: runFrameRate),
+                    outPoint: formatInput(runOutString, fps: runFrameRate),
                     durationFrames: dur,
                     durationString: durString
                 )
 
                 withAnimation {
-                    batchList.append(entry)
-                    trtInString = ""
-                    trtOutString = ""
-                    activeTrtField = .inPoint
+                    runList.append(entry)
+                    runInString = ""
+                    runOutString = ""
+                    activeRunField = .inPoint
                 }
                 saveState()
             }
@@ -638,7 +648,7 @@ class AppViewModel: ObservableObject {
     }
 
     func saveImmediate() {
-        // AppStateSnapshot must match the struct in TimecodeLogic.swift
+        // AppStateSnapshot must match the struct in TimecodeLogic
         let snapshot = AppStateSnapshot(
             mode: mode,
             isFramesMode: isFramesMode,
@@ -649,10 +659,10 @@ class AppViewModel: ObservableObject {
             accumulatedFrames: accumulatedFrames,
             pendingOperation: pendingOperation,
 
-            trtFrameRate: trtFrameRate,
-            batchList: batchList,
-            trtInString: trtInString,
-            trtOutString: trtOutString,
+            runFrameRate: runFrameRate,
+            runList: runList,
+            runInString: runInString,
+            runOutString: runOutString,
 
             convInputString: convInputString,
             convSourceRate: convSourceRate,
@@ -691,10 +701,10 @@ class AppViewModel: ObservableObject {
             self.accumulatedFrames = snapshot.accumulatedFrames
             self.pendingOperation = snapshot.pendingOperation
 
-            self.trtFrameRate = snapshot.trtFrameRate
-            self.batchList = snapshot.batchList
-            self.trtInString = snapshot.trtInString
-            self.trtOutString = snapshot.trtOutString
+            self.runFrameRate = snapshot.runFrameRate
+            self.runList = snapshot.runList
+            self.runInString = snapshot.runInString
+            self.runOutString = snapshot.runOutString
 
             self.convInputString = snapshot.convInputString
             self.convSourceRate = snapshot.convSourceRate

@@ -21,6 +21,20 @@
                ReferencedContainer = "container:PostCode.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B09FB67F2F20ABA600E03A87"
+               BuildableName = "PostCodeTests.xctest"
+               BlueprintName = "PostCodeTests"
+               ReferencedContainer = "container:PostCode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -30,7 +44,7 @@
       shouldUseLaunchSchemeArgsEnv = "YES">
       <TestPlans>
          <TestPlanReference
-            reference = "container:PostCode.xctestplan"
+            reference = "container:PostCodeTests.xctestplan"
             default = "YES">
          </TestPlanReference>
       </TestPlans>
@@ -40,7 +54,7 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B08F44802F11DFDB00B52D8A"
+               BlueprintIdentifier = "B09FB67F2F20ABA600E03A87"
                BuildableName = "PostCodeTests.xctest"
                BlueprintName = "PostCodeTests"
                ReferencedContainer = "container:PostCode.xcodeproj">

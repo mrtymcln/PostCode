@@ -26,20 +26,28 @@ struct ContentView: View {
                     iphoneLayout(width: geo.size.width, height: geo.size.height)
                 }
             }
-            .onAppear { isViewFocused = true }
-            .focusable(true)
+            .onAppear {
+                DispatchQueue.main.async {
+                    isViewFocused = true
+                }
+            }.focusable(true)
             .focused($isViewFocused)
             .onKeyPress { press in handleHardwareKey(press) }
         }
         .ignoresSafeArea(.keyboard)
-        .sheet(isPresented: $vm.showWelcomeSheet) { WelcomeView() }
-        .alert("Custom frame rate", isPresented: $vm.showCustomFpsAlert) {
+        
+        .sheet(isPresented: $vm.showWelcomeSheet) {
+            WelcomeView(onContinue: { vm.markWelcomeComplete() })
+                .interactiveDismissDisabled() // Prevents swiping away.
+                .preferredColorScheme(.dark) // Forces dark mode.
+            
+        }        .alert("Custom frame rate", isPresented: $vm.showCustomFpsAlert) {
             TextField(" 1-999", text: $vm.customFpsInput)
                 .keyboardType(.decimalPad)
 
             Button("Cancel", role: .cancel) {}
             Button("OK") {
-                // Check for Easter Egg
+                // Check for Easter Egg.
                 let codes = ["14", "88", "1488"]
                 if codes.contains(vm.customFpsInput) {
                     withAnimation(.easeIn(duration: 0.2)) { showBolt = true }
@@ -72,7 +80,7 @@ struct ContentView: View {
 
 // MARK: - SUBVIEWS
 
-    extension ContentView {
+extension ContentView {
 
     private var mainDisplaySize: CGFloat { isPad ? 80 : 42 }
     private var tapeFontSize: CGFloat { isPad ? 32 : 24 }
@@ -99,10 +107,10 @@ struct ContentView: View {
                         ZStack {
                             Color.black.ignoresSafeArea()
                             VStack {
-                                if vm.mode == .calculator {
+                                if vm.mode == .calc {
                                     tickerTapeView
-                                } else if vm.mode == .trt {
-                                    trtListView
+                                } else if vm.mode == .run {
+                                    runListView
                                 } else {
                                     converterDisplayView
                                 }
@@ -127,8 +135,8 @@ struct ContentView: View {
 
                             Spacer()
 
-                            if vm.mode == .trt {
-                                trtInputArea
+                            if vm.mode == .run {
+                                runInputArea
                                     .padding(.bottom, 30)
                                     .padding(.horizontal, 30)
                                     .transition(
@@ -138,7 +146,7 @@ struct ContentView: View {
                                     )
                             }
 
-                        // 2.3 KEYPAD
+                            // 2.3 KEYPAD
                             let keypadW = min(contentWidth * 0.40, 420)
                             keypadLayout(width: keypadW)
                                 .frame(width: keypadW)
@@ -149,16 +157,16 @@ struct ContentView: View {
                     }
                 } else {
 
-            // 3. PORTRAIT (Disabled but kept the code)
+                    // 3. PORTRAIT disabled but kept the code
                     VStack(spacing: 0) {
                         // 3.1 TICKER TAPE
                         ZStack {
                             Color.black.ignoresSafeArea()
                             VStack {
-                                if vm.mode == .calculator {
+                                if vm.mode == .calc {
                                     tickerTapeView
-                                } else if vm.mode == .trt {
-                                    trtListView
+                                } else if vm.mode == .run {
+                                    runListView
                                 } else {
                                     converterDisplayView
                                 }
@@ -182,13 +190,13 @@ struct ContentView: View {
 
                             Spacer()
 
-                            if vm.mode == .trt {
-                                trtInputArea
+                            if vm.mode == .run {
+                                runInputArea
                                     .padding(.bottom, 20)
                                     .padding(.horizontal, 20)
                             }
 
-                        // 3.3 KEYPAD
+                            // 3.3 KEYPAD
                             let keypadW = min(contentWidth, 420)
                             keypadLayout(width: keypadW)
                                 .frame(width: keypadW)
@@ -206,10 +214,10 @@ struct ContentView: View {
     private var sidebarView: some View {
         VStack(spacing: 20) {
             Spacer()
-            sidebarButton(mode: .calculator, icon: "plus.circle", label: "Calc")
-            sidebarButton(mode: .trt, icon: "figure.run", label: "Run")
+            sidebarButton(mode: .calc, icon: "plus.circle", label: "Calc")
+            sidebarButton(mode: .run, icon: "figure.run", label: "Run")
             sidebarButton(
-                mode: .converter,
+                mode: .conv,
                 icon: "arrow.up.arrow.down",
                 label: "Conv"
             )
@@ -248,10 +256,10 @@ struct ContentView: View {
                 Color.black
             ).zIndex(20)
             ZStack {
-                if vm.mode == .calculator {
+                if vm.mode == .calc {
                     tickerTapeView
-                } else if vm.mode == .trt {
-                    trtListView
+                } else if vm.mode == .run {
+                    runListView
                 } else {
                     converterDisplayView
                 }
@@ -261,8 +269,8 @@ struct ContentView: View {
             .onTapGesture { isViewFocused = true }
             .padding(.horizontal, 16).padding(.bottom, 10)
 
-            if vm.mode == .trt {
-                trtInputArea.padding(.horizontal, 16).padding(.bottom, 10)
+            if vm.mode == .run {
+                runInputArea.padding(.horizontal, 16).padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             keypadLayout(width: width).padding(.bottom, 20)
@@ -273,7 +281,7 @@ struct ContentView: View {
     // 1. HEADER
     private var headerView: some View {
         HStack(spacing: 8) {
-            // Mode toggle for iPhone only, as iPad uses Sidebar
+            // Mode toggle for iPhone only, as iPad uses sidebar
             if !isPad {
                 Button(action: { withAnimation { vm.toggleAppMode() } }) {
                     PillLabel(
@@ -284,7 +292,7 @@ struct ContentView: View {
                 }
             }
 
-            if vm.mode != .converter {
+            if vm.mode != .conv {
                 Menu {
                     ForEach(FrameRate.allCases) { rate in
                         Button(action: { vm.changeFrameRate(to: rate) }) {
@@ -318,7 +326,7 @@ struct ContentView: View {
                     color: Color(UIColor.systemGray5)
                 )
             }
-            .opacity(vm.mode == .trt ? 0 : 1).disabled(vm.mode == .trt)
+            .opacity(vm.mode == .run ? 0 : 1).disabled(vm.mode == .run)
 
             Spacer()
                 .contentShape(Rectangle())
@@ -361,7 +369,7 @@ struct ContentView: View {
         return VStack(spacing: buttonSpacing) {
 
             // ROW 1
-            if vm.mode == .calculator {
+            if vm.mode == .calc {
                 HStack(spacing: buttonSpacing) {
                     CalcButton(
                         label: "AC",
@@ -420,7 +428,7 @@ struct ContentView: View {
                     color: colourDarkGrey,
                     customSize: calcBtnSize
                 ) { vm.addDigit("9") }
-                if vm.mode == .calculator {
+                if vm.mode == .calc {
                     CalcButton(
                         label: "Multiply",
                         systemImage: "multiply",
@@ -451,7 +459,7 @@ struct ContentView: View {
                     color: colourDarkGrey,
                     customSize: calcBtnSize
                 ) { vm.addDigit("6") }
-                if vm.mode == .calculator {
+                if vm.mode == .calc {
                     CalcButton(
                         label: "Minus",
                         systemImage: "minus",
@@ -482,7 +490,7 @@ struct ContentView: View {
                     color: colourDarkGrey,
                     customSize: calcBtnSize
                 ) { vm.addDigit("3") }
-                if vm.mode == .calculator {
+                if vm.mode == .calc {
                     CalcButton(
                         label: "Plus",
                         systemImage: "plus",
@@ -515,7 +523,7 @@ struct ContentView: View {
                     textColor: .white,
                     customSize: calcBtnSize
                 ) { vm.backspace() }
-                if vm.mode == .calculator {
+                if vm.mode == .calc {
                     CalcButton(
                         label: "Equals",
                         systemImage: "equal",
@@ -573,13 +581,15 @@ struct ContentView: View {
         )
     }
 
-    private var trtListView: some View {
+    private var runListView: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("TRT:").font(.headline).foregroundColor(.white)
+                Text("TRT:").font(.headline).fontWeight(.bold).foregroundColor(
+                    .white
+                )
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(vm.trtTotalString)
+                    Text(vm.runTotalString)
                         .font(
                             .system(
                                 size: isPad ? 48 : 32,
@@ -587,7 +597,7 @@ struct ContentView: View {
                                 design: .monospaced
                             )
                         ).foregroundColor(.green)
-                    if let realTime = vm.trtRealTimeString {
+                    if let realTime = vm.runRealTimeString {
                         Text(realTime).font(
                             .system(size: 14, weight: .medium, design: .rounded)
                         ).foregroundColor(.gray)
@@ -599,7 +609,7 @@ struct ContentView: View {
             )
 
             List {
-                ForEach(Array(vm.batchList.enumerated()), id: \.element) {
+                ForEach(Array(vm.runList.enumerated()), id: \.element) {
                     index,
                     entry in
                     HStack {
@@ -618,7 +628,7 @@ struct ContentView: View {
                         ).fontWeight(.bold).foregroundColor(.orange)
                     }.listRowBackground(Color.black).listRowSeparatorTint(.gray)
                 }.onDelete { indexSet in
-                    vm.batchList.remove(atOffsets: indexSet)
+                    vm.runList.remove(atOffsets: indexSet)
                 }
             }.listStyle(.plain)
         }
@@ -642,8 +652,8 @@ struct ContentView: View {
                             )
                         }
                         Spacer()
-                        Text("FROM:").font(.caption).fontWeight(.bold)
-                            .foregroundColor(.gray)
+                        Text("FROM:").font(.headline).fontWeight(.bold)
+                            .foregroundColor(.white)
                     }
                     Text(vm.getFormattedConvInput())
                         .font(
@@ -677,8 +687,8 @@ struct ContentView: View {
                             )
                         }
                         Spacer()
-                        Text("TO:").font(.caption).fontWeight(.bold)
-                            .foregroundColor(.gray)
+                        Text("TO:").font(.headline).fontWeight(.bold)
+                            .foregroundColor(.white)
                     }
                     Text(vm.convResultString)
                         .font(
@@ -703,25 +713,32 @@ struct ContentView: View {
 
 // MARK: - INPUT COMPONENT
 
-    private var trtInputArea: some View {
+    private var runInputArea: some View {
         HStack(spacing: 12) {
-            TRTInputField(
+            RunInputField(
                 label: "IN:",
-                value: vm.formatInput(vm.trtInString),
-                isActive: vm.activeTrtField == .inPoint
+                value: vm.formatInput(vm.runInString),
+                isActive: vm.activeRunField == .inPoint
             )
-            .onTapGesture { vm.activeTrtField = .inPoint }
-            TRTInputField(
+            .onTapGesture {
+                DispatchQueue.main.async {
+                    vm.activeRunField = .inPoint
+                }
+            }
+            RunInputField(
                 label: "OUT:",
-                value: vm.formatInput(vm.trtOutString),
-                isActive: vm.activeTrtField == .outPoint
+                value: vm.formatInput(vm.runOutString),
+                isActive: vm.activeRunField == .outPoint
             )
-            .onTapGesture { vm.activeTrtField = .outPoint }
-
+            .onTapGesture {
+                DispatchQueue.main.async {
+                    vm.activeRunField = .outPoint
+                }
+            }
             Button(action: {
                 let generator = UIImpactFeedbackGenerator(style: .medium)
                 generator.impactOccurred()
-                vm.addBatchEntry()
+                vm.addSegment()
             }) {
                 Image(systemName: "plus").font(.title2).bold().foregroundColor(
                     .white
@@ -738,7 +755,7 @@ struct ContentView: View {
 
     func handleHardwareKey(_ press: KeyPress) -> KeyPress.Result {
         let char = press.characters
-        if vm.mode == .calculator {
+        if vm.mode == .calc {
             if char == "+" || (char == "=" && press.modifiers.contains(.shift))
             {
                 vm.setOperation(.add)
@@ -770,7 +787,7 @@ struct ContentView: View {
                 vm.recallResult()
                 return .handled
             }
-        } else if vm.mode == .converter {
+        } else if vm.mode == .conv {
             if char == "c" || char == "C" {
                 vm.clearAll()
                 return .handled
@@ -785,16 +802,16 @@ struct ContentView: View {
             return .handled
         }
         if press.key == .return || char == "\r" || char == "\n" {
-            if vm.mode == .calculator {
+            if vm.mode == .calc {
                 vm.calculateResult()
-            } else if vm.mode == .trt {
-                vm.addBatchEntry()
+            } else if vm.mode == .run {
+                vm.addSegment()
             }
             return .handled
         }
-        if press.key == .tab && vm.mode == .trt {
-            vm.activeTrtField =
-                (vm.activeTrtField == .inPoint) ? .outPoint : .inPoint
+        if press.key == .tab && vm.mode == .run {
+            vm.activeRunField =
+                (vm.activeRunField == .inPoint) ? .outPoint : .inPoint
             return .handled
         }
         return .ignored

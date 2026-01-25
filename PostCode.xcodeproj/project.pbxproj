@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXContainerItemProxy section */
-		B08F44822F11DFDB00B52D8A /* PBXContainerItemProxy */ = {
+		B09FB6842F20ABA600E03A87 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B08F446C2F11DFDA00B52D8A /* Project object */;
 			proxyType = 1;
@@ -16,9 +16,20 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		B09FB6622F207B9400E03A87 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = Frameworks;
+			files = (
+			);
+			name = "Embed Frameworks";
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		B08F44742F11DFDA00B52D8A /* PostCode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PostCode.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		B08F44812F11DFDB00B52D8A /* PostCodeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PostCodeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B09FB6802F20ABA600E03A87 /* PostCodeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PostCodeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -28,13 +39,6 @@
 				Info.plist,
 			);
 			target = B08F44732F11DFDA00B52D8A /* PostCode */;
-		};
-		B0971F3D2F1C6E7400792A82 /* Exceptions for "PostCodeTests" folder in "PostCodeTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				PostCodeTests.swift,
-			);
-			target = B08F44802F11DFDB00B52D8A /* PostCodeTests */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -47,11 +51,8 @@
 			path = PostCode;
 			sourceTree = "<group>";
 		};
-		B0971F3C2F1C6E6600792A82 /* PostCodeTests */ = {
+		B09FB6812F20ABA600E03A87 /* PostCodeTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				B0971F3D2F1C6E7400792A82 /* Exceptions for "PostCodeTests" folder in "PostCodeTests" target */,
-			);
 			path = PostCodeTests;
 			sourceTree = "<group>";
 		};
@@ -63,7 +64,7 @@
 			files = (
 			);
 		};
-		B08F447E2F11DFDB00B52D8A /* Frameworks */ = {
+		B09FB67D2F20ABA600E03A87 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
 			);
@@ -74,8 +75,8 @@
 		B08F446B2F11DFDA00B52D8A = {
 			isa = PBXGroup;
 			children = (
-				B0971F3C2F1C6E6600792A82 /* PostCodeTests */,
 				B08F44762F11DFDA00B52D8A /* PostCode */,
+				B09FB6812F20ABA600E03A87 /* PostCodeTests */,
 				B08F44752F11DFDA00B52D8A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -84,7 +85,7 @@
 			isa = PBXGroup;
 			children = (
 				B08F44742F11DFDA00B52D8A /* PostCode.app */,
-				B08F44812F11DFDB00B52D8A /* PostCodeTests.xctest */,
+				B09FB6802F20ABA600E03A87 /* PostCodeTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -99,6 +100,7 @@
 				B08F44702F11DFDA00B52D8A /* Sources */,
 				B08F44712F11DFDA00B52D8A /* Frameworks */,
 				B08F44722F11DFDA00B52D8A /* Resources */,
+				B09FB6622F207B9400E03A87 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -110,22 +112,25 @@
 			productReference = B08F44742F11DFDA00B52D8A /* PostCode.app */;
 			productType = "com.apple.product-type.application";
 		};
-		B08F44802F11DFDB00B52D8A /* PostCodeTests */ = {
+		B09FB67F2F20ABA600E03A87 /* PostCodeTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B08F44982F11DFDB00B52D8A /* Build configuration list for PBXNativeTarget "PostCodeTests" */;
+			buildConfigurationList = B09FB6862F20ABA600E03A87 /* Build configuration list for PBXNativeTarget "PostCodeTests" */;
 			buildPhases = (
-				B08F447D2F11DFDB00B52D8A /* Sources */,
-				B08F447E2F11DFDB00B52D8A /* Frameworks */,
-				B08F447F2F11DFDB00B52D8A /* Resources */,
+				B09FB67C2F20ABA600E03A87 /* Sources */,
+				B09FB67D2F20ABA600E03A87 /* Frameworks */,
+				B09FB67E2F20ABA600E03A87 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				B08F44832F11DFDB00B52D8A /* PBXTargetDependency */,
+				B09FB6852F20ABA600E03A87 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B09FB6812F20ABA600E03A87 /* PostCodeTests */,
 			);
 			name = PostCodeTests;
 			productName = PostCodeTests;
-			productReference = B08F44812F11DFDB00B52D8A /* PostCodeTests.xctest */;
+			productReference = B09FB6802F20ABA600E03A87 /* PostCodeTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -141,7 +146,7 @@
 					B08F44732F11DFDA00B52D8A = {
 						CreatedOnToolsVersion = 26.2;
 					};
-					B08F44802F11DFDB00B52D8A = {
+					B09FB67F2F20ABA600E03A87 = {
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = B08F44732F11DFDA00B52D8A;
 					};
@@ -162,7 +167,7 @@
 			projectRoot = "";
 			targets = (
 				B08F44732F11DFDA00B52D8A /* PostCode */,
-				B08F44802F11DFDB00B52D8A /* PostCodeTests */,
+				B09FB67F2F20ABA600E03A87 /* PostCodeTests */,
 			);
 		};
 /* End PBXProject section */
@@ -173,7 +178,7 @@
 			files = (
 			);
 		};
-		B08F447F2F11DFDB00B52D8A /* Resources */ = {
+		B09FB67E2F20ABA600E03A87 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -186,7 +191,7 @@
 			files = (
 			);
 		};
-		B08F447D2F11DFDB00B52D8A /* Sources */ = {
+		B09FB67C2F20ABA600E03A87 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
 			);
@@ -194,10 +199,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		B08F44832F11DFDB00B52D8A /* PBXTargetDependency */ = {
+		B09FB6852F20ABA600E03A87 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = B08F44732F11DFDA00B52D8A /* PostCode */;
-			targetProxy = B08F44822F11DFDB00B52D8A /* PBXContainerItemProxy */;
+			targetProxy = B09FB6842F20ABA600E03A87 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -234,6 +239,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
@@ -261,6 +267,8 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -277,6 +285,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
@@ -304,7 +313,7 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -316,21 +325,75 @@
 			};
 			name = Release;
 		};
-		B08F44992F11DFDB00B52D8A /* Debug configuration for PBXNativeTarget "PostCodeTests" */ = {
+		B09FB6872F20ABA600E03A87 /* Debug configuration for PBXNativeTarget "PostCodeTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = RV65KD7NWB;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = McLean.PostCodeTests;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.McLean.PostCodeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -338,25 +401,73 @@
 			};
 			name = Debug;
 		};
-		B08F449A2F11DFDB00B52D8A /* Release configuration for PBXNativeTarget "PostCodeTests" */ = {
+		B09FB6882F20ABA600E03A87 /* Release configuration for PBXNativeTarget "PostCodeTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = RV65KD7NWB;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = McLean.PostCodeTests;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.McLean.PostCodeTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PostCode.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PostCode";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -379,11 +490,11 @@
 			);
 			defaultConfigurationName = Release;
 		};
-		B08F44982F11DFDB00B52D8A /* Build configuration list for PBXNativeTarget "PostCodeTests" */ = {
+		B09FB6862F20ABA600E03A87 /* Build configuration list for PBXNativeTarget "PostCodeTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				B08F44992F11DFDB00B52D8A /* Debug configuration for PBXNativeTarget "PostCodeTests" */,
-				B08F449A2F11DFDB00B52D8A /* Release configuration for PBXNativeTarget "PostCodeTests" */,
+				B09FB6872F20ABA600E03A87 /* Debug configuration for PBXNativeTarget "PostCodeTests" */,
+				B09FB6882F20ABA600E03A87 /* Release configuration for PBXNativeTarget "PostCodeTests" */,
 			);
 			defaultConfigurationName = Release;
 		};

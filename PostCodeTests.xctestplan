@@ -1,0 +1,27 @@
+{
+  "configurations" : [
+    {
+      "id" : "1898BDE0-A771-4659-A92C-3F13FE325945",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "skippedTests" : [
+        "SMPTEaccuracyTests"
+      ],
+      "target" : {
+        "containerPath" : "container:PostCode.xcodeproj",
+        "identifier" : "B09FB67F2F20ABA600E03A87",
+        "name" : "PostCodeTests"
+      }
+    }
+  ],
+  "version" : 1
+}

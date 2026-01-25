@@ -6,34 +6,34 @@ struct AppStateSnapshot: Codable, Sendable {
     var mode: AppMode
     var isFramesMode: Bool
 
-    // Calculator State
+    // Calc State
     var calcFrameRate: FrameRate
     var inputString: String
     var tickerTape: [String]
     var accumulatedFrames: Int
     var pendingOperation: CalcOperation
 
-    // TRT State
-    var trtFrameRate: FrameRate
-    var batchList: [BatchEntry]
-    var trtInString: String
-    var trtOutString: String
+    // Run State
+    var runFrameRate: FrameRate
+    var runList: [Segment]
+    var runInString: String
+    var runOutString: String
 
-    // Converter State
+    // Conv State
     var convInputString: String
     var convSourceRate: FrameRate
     var convDestRate: FrameRate
 }
 
 enum AppMode: String, Codable, CaseIterable, Sendable {
-    case calculator, trt, converter
+    case calc, run, conv
 }
 
 enum CalcOperation: String, Codable, Sendable {
     case none, add, subtract, multiply, divide
 }
 
-struct BatchEntry: Identifiable, Codable, Hashable, Sendable {
+struct Segment: Identifiable, Codable, Hashable, Sendable {
     var id = UUID()
     let inPoint: String
     let outPoint: String
@@ -41,7 +41,7 @@ struct BatchEntry: Identifiable, Codable, Hashable, Sendable {
     let durationString: String
 }
 
-enum TrtField: Sendable {
+enum RunField: Sendable {
     case inPoint, outPoint
 }
 
@@ -176,7 +176,6 @@ struct TimecodeCalculator {
                 frames += dropFrames * 9 * D
             }
         }
-        // ----------------------------------
 
         let f = frames % base
         let totalSeconds = frames / base
@@ -218,13 +217,12 @@ struct TimecodeCalculator {
             let drops = fps.dropFrameCount
 
             // Calculate how many drops have happened up to this minute total
-            // Drops happen every minute EXCEPT every 10th minute
+            // Drops happen every minute except every 10th minute
             let numDropEvents = totalMinutes - (totalMinutes / 10)
             let dropFrames = numDropEvents * drops
 
             totalFrames -= dropFrames
         }
-        // --------------------------------------
 
         return input.contains("-") ? -totalFrames : totalFrames
     }
