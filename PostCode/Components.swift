@@ -131,7 +131,7 @@ struct RunInputField: View {
     let label: String
     let value: String
     let isActive: Bool
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.caption).bold().foregroundColor(.white)

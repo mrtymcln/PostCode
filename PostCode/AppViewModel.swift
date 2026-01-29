@@ -169,12 +169,9 @@ class AppViewModel: ObservableObject {
 
         if current != lastRunVersion {
             showWelcomeSheet = true
-            // IMPORTANT: We do NOT save 'lastRunVersion = current' here anymore.
-            // If we did, the sheet would only show once, even if the user crashed/quit immediately.
         }
     }
 
-    // New function called only when the button is clicked
     func markWelcomeComplete() {
         if let current = Bundle.main.infoDictionary?[
             "CFBundleShortVersionString"
@@ -185,7 +182,7 @@ class AppViewModel: ObservableObject {
     }
 
     func changeFrameRate(to newRate: FrameRate) {
-        // Only update the frame rate for the current app mode
+        // Only update the frame rate for the current app mode.
         switch mode {
         case .calc:
             let old = calcFrameRate
@@ -228,7 +225,7 @@ class AppViewModel: ObservableObject {
     func toggleDisplayMode() {
         Task {
             withAnimation {
-                // Convert active input
+                // Convert active input.
                 if mode == .calc && !inputString.isEmpty {
                     if !isFramesMode {
                         let frames = TimecodeCalculator.inputToFrames(
@@ -269,7 +266,7 @@ class AppViewModel: ObservableObject {
                     }
                 }
 
-                // Update ticker tape
+                // Update ticker tape.
                 if mode == .calc {
                     var newTape: [String] = []
                     for line in tickerTape {
@@ -396,6 +393,166 @@ class AppViewModel: ObservableObject {
         }
     }
 
+// MARK: - CLIPBOARD LOGIC
+
+    func pasteFromClipboard() {
+        guard let string = UIPasteboard.general.string else { return }
+
+        // 1. Strip everything that isn't a number.
+        // This converts "01:00:00:00" to "01000000" which fits the input logic.
+        let cleaned = string.filter { "0123456789".contains($0) }
+
+        guard !cleaned.isEmpty else { return }
+
+        // 2. Apply to the correct mode
+        Task {
+            withAnimation {
+                if mode == .calc {
+                    // Reset if just finished a calculation
+                    if lastWasEquals {
+                        inputString = ""
+                        accumulatedFrames = 0
+                        tickerTape.append("----------------")
+                        lastWasEquals = false
+                    }
+
+                    // Prevent overflow
+                    let limit =
+                        isFramesMode ? 12 : (6 + calcFrameRate.frameDigits)
+                    let available = limit - inputString.count
+
+                    if available > 0 {
+                        let toPaste = String(cleaned.prefix(available))
+                        inputString += toPaste
+                    }
+
+                } else if mode == .run {
+                    // Run app mode logic if needed in future (skipped for now as per request)
+                } else if mode == .conv {
+                    let limit =
+                        isFramesMode ? 12 : (6 + convSourceRate.frameDigits)
+                    let available = limit - convInputString.count
+
+                    if available > 0 {
+                        let toPaste = String(cleaned.prefix(available))
+                        convInputString += toPaste
+                    }
+                }
+                saveState()
+            }
+        }
+    }
+
+    // Helper to get Frame Count for the "Copy as Frames" button.
+    func getCurrentDisplayFrames() -> Int {
+        if isFramesMode {
+            return Int(inputString) ?? 0
+        } else {
+            return TimecodeCalculator.inputToFrames(
+                input: inputString,
+                fps: calcFrameRate
+            )
+        }
+    }
+
+// MARK: - HISTORY MANAGEMENT
+
+    func deleteTapeItem(at index: Int) {
+        // 1. Remove the visual line.
+        guard tickerTape.indices.contains(index) else { return }
+        tickerTape.remove(at: index)
+
+        // 2. Re-calculate the maths from scratch.
+        recalculateFromTape()
+    }
+
+    private func recalculateFromTape() {
+        var newTotal = 0
+
+        // 1. REBUILD THE SUM
+        for line in tickerTape {
+            // A. Clean the line.
+            let cleanLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // B. Ignore "Result" lines (lines starting with =) and Separators lines.
+            if cleanLine.starts(with: "=") { continue }
+            if cleanLine.contains("-----") { continue }
+
+            // C. Determine the operation.
+            var currentOp: CalcOperation = .add
+            var textToParse = cleanLine
+
+            if cleanLine.starts(with: "+") {
+                currentOp = .add
+                textToParse = String(cleanLine.dropFirst())
+            } else if cleanLine.starts(with: "-") {
+                currentOp = .subtract
+                textToParse = String(cleanLine.dropFirst())
+            } else if cleanLine.starts(with: "*") || cleanLine.starts(with: "x")
+            {
+                currentOp = .multiply
+                textToParse = String(cleanLine.dropFirst())
+            } else if cleanLine.starts(with: "/") {
+                currentOp = .divide
+                textToParse = String(cleanLine.dropFirst())
+            }
+
+            // D. Convert Text to Frames.
+            let valueString = textToParse.replacingOccurrences(
+                of: " ",
+                with: ""
+            )
+            let valueFrames = TimecodeCalculator.inputToFrames(
+                input: valueString,
+                fps: activeFrameRate
+            )
+
+            // E. Apply maths.
+            switch currentOp {
+            case .add: newTotal += valueFrames
+            case .subtract: newTotal -= valueFrames
+            case .multiply: newTotal *= valueFrames
+            case .divide:
+                if valueFrames != 0 {
+                    newTotal /= valueFrames
+                }
+            case .none: break
+            }
+        }
+
+        // 2. UPDATE SOURCE OF TRUTH
+        self.accumulatedFrames = newTotal
+        self.inputString = ""
+
+        // 3. UPDATE VISUALS
+        // If the last line on screen is a Result (=), update it to match the new total.
+        if let last = tickerTape.last, last.starts(with: "=") {
+            let resultStr =
+                isFramesMode
+                ? "\(newTotal)"
+                : TimecodeCalculator.framesToString(
+                    totalFrames: newTotal,
+                    fps: activeFrameRate
+                )
+
+            // Overwrite the last line with the correct new total.
+            tickerTape[tickerTape.count - 1] = "= " + resultStr
+
+            // Ensure the app knows we are sitting on a result.
+            lastWasEquals = true
+        } else {
+            // If the last line is NOT a result (e.g. we deleted the result),
+            // then we are in the middle of an operation.
+            lastWasEquals = false
+        }
+
+        // 4. Handle the empty state.
+        if tickerTape.isEmpty {
+            self.accumulatedFrames = 0
+            lastWasEquals = false
+        }
+    }
+
 // MARK: - LOGIC HELPERS
 
     func getFormattedActiveDisplay() -> String {
@@ -418,12 +575,12 @@ class AppViewModel: ObservableObject {
         let isNegative = cleanRaw.hasPrefix("-")
         if isNegative { cleanRaw.removeFirst() }
 
-        // Dynamic frame rate selection
+        // Dynamic frame rate selection.
         let useFps: FrameRate
         if let specificFps = fps {
             useFps = specificFps
         } else {
-            // Context aware default
+            // Context-aware default.
             switch mode {
             case .calc: useFps = calcFrameRate
             case .run: useFps = runFrameRate
@@ -624,6 +781,35 @@ class AppViewModel: ObservableObject {
         tickerTape = newTape
     }
 
+// MARK: - CSV EXPORT
+
+    func generateCSV() -> URL {
+        // 1. Create the heading row.
+        var csvString = "Segment,In,Out,Duration\n"
+
+        // 2. Loop through the Run List and append rows.
+        for (index, item) in runList.enumerated() {
+            // Format: "1,00:00:00:00,00:00:05:00,00:00:05:00"
+            let row =
+                "\(index + 1),\(item.inPoint),\(item.outPoint),\(item.durationString)\n"
+            csvString.append(row)
+        }
+
+        // 3. Define the file path in the Temp folder.
+        let fileName = "PostCode_RunList_Output.csv"
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent(fileName)
+
+        // 4. Write the file.
+        do {
+            try csvString.write(to: path, atomically: true, encoding: .utf8)
+        } catch {
+            print("Failed to write CSV: \(error)")
+        }
+
+        return path
+    }
+
 // MARK: - PERSISTENCE
 
     private func getDocumentsDirectory() -> URL {
@@ -648,7 +834,7 @@ class AppViewModel: ObservableObject {
     }
 
     func saveImmediate() {
-        // AppStateSnapshot must match the struct in TimecodeLogic
+        // AppStateSnapshot must match the struct in TimecodeLogic.
         let snapshot = AppStateSnapshot(
             mode: mode,
             isFramesMode: isFramesMode,

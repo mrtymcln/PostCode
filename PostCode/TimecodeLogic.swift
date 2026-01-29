@@ -89,7 +89,7 @@ enum FrameRate: Hashable, Codable, Identifiable, CaseIterable, Sendable {
         }
     }
 
-    // Core Maths Properties
+    // Core maths properties
     var baseFPS: Int {
         switch self {
         case .fps23976: return 24

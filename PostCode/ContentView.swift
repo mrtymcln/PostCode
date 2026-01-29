@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @ObservedObject var vm: AppViewModel
@@ -35,19 +36,19 @@ struct ContentView: View {
             .onKeyPress { press in handleHardwareKey(press) }
         }
         .ignoresSafeArea(.keyboard)
-        
+
         .sheet(isPresented: $vm.showWelcomeSheet) {
             WelcomeView(onContinue: { vm.markWelcomeComplete() })
-                .interactiveDismissDisabled() // Prevents swiping away.
-                .preferredColorScheme(.dark) // Forces dark mode.
-            
-        }        .alert("Custom frame rate", isPresented: $vm.showCustomFpsAlert) {
+                .interactiveDismissDisabled()  // Prevents swiping away.
+                .preferredColorScheme(.dark)  // Forces dark mode.
+
+        }.alert("Custom frame rate", isPresented: $vm.showCustomFpsAlert) {
             TextField(" 1-999", text: $vm.customFpsInput)
                 .keyboardType(.decimalPad)
 
             Button("Cancel", role: .cancel) {}
             Button("OK") {
-                // Check for Easter Egg.
+                // Check for the easter egg.
                 let codes = ["14", "88", "1488"]
                 if codes.contains(vm.customFpsInput) {
                     withAnimation(.easeIn(duration: 0.2)) { showBolt = true }
@@ -89,7 +90,7 @@ extension ContentView {
 
     private func ipadLayout(width: CGFloat, height: CGFloat) -> some View {
         let isLandscape = width > height
-        // Calculate remaining width after sidebar
+        // Calculate remaining width after sidebar.
         let contentWidth = width - 80
 
         return HStack(spacing: 0) {
@@ -103,7 +104,7 @@ extension ContentView {
             Group {
                 if isLandscape {
                     HStack(spacing: 0) {
-                        // 2.1 TICKER TAPE
+                        // A. TICKER TAPE
                         ZStack {
                             Color.black.ignoresSafeArea()
                             VStack {
@@ -126,7 +127,7 @@ extension ContentView {
                             width: 1
                         ).opacity(0.15)
 
-                        // 2.2 CONSOLE
+                        // B. CONSOLE
                         VStack(spacing: 0) {
                             headerView
                                 .padding(.vertical, 30)
@@ -146,7 +147,7 @@ extension ContentView {
                                     )
                             }
 
-                            // 2.3 KEYPAD
+                            // C. KEYPAD
                             let keypadW = min(contentWidth * 0.40, 420)
                             keypadLayout(width: keypadW)
                                 .frame(width: keypadW)
@@ -159,7 +160,7 @@ extension ContentView {
 
                     // 3. PORTRAIT disabled but kept the code
                     VStack(spacing: 0) {
-                        // 3.1 TICKER TAPE
+                        // A. TICKER TAPE
                         ZStack {
                             Color.black.ignoresSafeArea()
                             VStack {
@@ -182,7 +183,7 @@ extension ContentView {
                             height: 1
                         ).opacity(0.15)
 
-                        // 3.2 CONSOLE
+                        // B. CONSOLE
                         VStack(spacing: 0) {
                             headerView
                                 .padding(.vertical, 20)
@@ -196,7 +197,7 @@ extension ContentView {
                                     .padding(.horizontal, 20)
                             }
 
-                            // 3.3 KEYPAD
+                            // C. KEYPAD
                             let keypadW = min(contentWidth, 420)
                             keypadLayout(width: keypadW)
                                 .frame(width: keypadW)
@@ -281,75 +282,23 @@ extension ContentView {
     // 1. HEADER
     private var headerView: some View {
         HStack(spacing: 8) {
-            // Mode toggle for iPhone only, as iPad uses sidebar
+            // A. Mode Toggle (iPhone Only)
             if !isPad {
-                Button(action: { withAnimation { vm.toggleAppMode() } }) {
-                    PillLabel(
-                        text: vm.getModeLabel(),
-                        icon: vm.getModeIcon(),
-                        color: Color(UIColor.systemGray5)
-                    )
-                }
+                modeToggleButton
             }
 
+            // B. Frame Rate Selector
             if vm.mode != .conv {
-                Menu {
-                    ForEach(FrameRate.allCases) { rate in
-                        Button(action: { vm.changeFrameRate(to: rate) }) {
-                            if vm.activeFrameRate.id == rate.id {
-                                Label(rate.id, systemImage: "checkmark")
-                            } else {
-                                Text(rate.id)
-                            }
-                        }
-                    }
-                    Button(action: { vm.showCustomFpsAlert = true }) {
-                        Text("Custom...")
-                        if !FrameRate.allCases.contains(where: {
-                            $0.id == vm.activeFrameRate.id
-                        }) {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                } label: {
-                    PillLabel(
-                        text: vm.activeFrameRate.id,
-                        icon: "chevron.up.chevron.down"
-                    )
-                }
+                frameRateMenu
             }
 
-            Button(action: { withAnimation { vm.toggleDisplayMode() } }) {
-                PillLabel(
-                    text: vm.isFramesMode ? "Fr" : "TC",
-                    icon: vm.isFramesMode ? "film" : "clock",
-                    color: Color(UIColor.systemGray5)
-                )
-            }
-            .opacity(vm.mode == .run ? 0 : 1).disabled(vm.mode == .run)
+            // C. TC / FR Toggle
+            displayModeToggleButton
 
             Spacer()
-                .contentShape(Rectangle())
-                .onTapGesture(count: 3) {
-                    vm.triggerEasterEgg()
-                }
 
-            HStack(spacing: 16) {
-                ShareLink(item: vm.exportText) {
-                    Image(systemName: "square.and.arrow.up").font(
-                        .system(size: 20, weight: .semibold)
-                    ).foregroundColor(.white)
-                }
-                Button(action: {
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    vm.showClearAlert = true
-                }) {
-                    Image(systemName: "trash").font(
-                        .system(size: 20, weight: .semibold)
-                    ).foregroundColor(.red).frame(width: 44, height: 44)
-                }
-            }
+            // D. Share and Clear
+            actionButtons
         }
         .padding(.horizontal, isPad ? 0 : 20)
         .alert(
@@ -361,184 +310,266 @@ extension ContentView {
         }
     }
 
+// MARK: - HEADER SUBVIEWS
+
+    private var modeToggleButton: some View {
+        Button(action: { withAnimation { vm.toggleAppMode() } }) {
+            PillLabel(
+                text: vm.getModeLabel(),
+                icon: vm.getModeIcon(),
+                color: Color(UIColor.systemGray5)
+            )
+        }
+    }
+
+    private var frameRateMenu: some View {
+        Menu {
+            ForEach(FrameRate.allCases) { rate in
+                Button(action: { vm.changeFrameRate(to: rate) }) {
+                    if vm.activeFrameRate.id == rate.id {
+                        Label(rate.id, systemImage: "checkmark")
+                    } else {
+                        Text(rate.id)
+                    }
+                }
+            }
+            Button(action: { vm.showCustomFpsAlert = true }) {
+                Text("Custom...")
+                if !FrameRate.allCases.contains(where: {
+                    $0.id == vm.activeFrameRate.id
+                }) {
+                    Image(systemName: "checkmark")
+                }
+            }
+        } label: {
+            PillLabel(
+                text: vm.activeFrameRate.id,
+                icon: "chevron.up.chevron.down"
+            )
+        }
+    }
+
+    private var displayModeToggleButton: some View {
+        Button(action: { withAnimation { vm.toggleDisplayMode() } }) {
+            PillLabel(
+                text: vm.isFramesMode ? "Fr" : "TC",
+                icon: vm.isFramesMode ? "film" : "clock",
+                color: Color(UIColor.systemGray5)
+            )
+        }
+        .opacity(vm.mode == .run ? 0 : 1).disabled(vm.mode == .run)
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 16) {
+            if vm.mode == .run {
+                Menu {
+                    TextShareButton(text: vm.exportText)
+                    CSVShareButton(url: vm.generateCSV())
+                } label: {
+                    Image(systemName: "square.and.arrow.up").font(
+                        .system(size: 20, weight: .semibold)
+                    ).foregroundColor(.white)
+                }
+            } else {
+                ShareLink(item: vm.exportText) {
+                    Image(systemName: "square.and.arrow.up").font(
+                        .system(size: 20, weight: .semibold)
+                    ).foregroundColor(.white)
+                }
+            }
+
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+                vm.showClearAlert = true
+            }) {
+                Image(systemName: "trash").font(
+                    .system(size: 20, weight: .semibold)
+                ).foregroundColor(.red).frame(width: 44, height: 44)
+            }
+        }
+    }
     // 2. KEYPAD
     private func keypadLayout(width: CGFloat) -> some View {
-        let safeWidth = width > 0 ? width : 375
-        let calcBtnSize = min(85, max(0, (safeWidth - (5 * 16)) / 4))
+        // Force everything to be CGFloat so the compiler doesn't guess.
+        let validWidth: CGFloat = width > 0 ? width : 375.0
+        let gaps: CGFloat = 5.0
+        let spacing: CGFloat = 16.0
+        let columns: CGFloat = 4.0
 
-        return VStack(spacing: buttonSpacing) {
+        let totalSpacing = gaps * spacing
+        let availableWidth = validWidth - totalSpacing
+        let rawSize = availableWidth / columns
 
-            // ROW 1
-            if vm.mode == .calc {
-                HStack(spacing: buttonSpacing) {
-                    CalcButton(
-                        label: "AC",
-                        color: colourLightGrey,
-                        textColor: .white,
-                        customSize: calcBtnSize
-                    ) {
-                        let generator = UIImpactFeedbackGenerator(
-                            style: .medium
-                        )
-                        generator.impactOccurred()
-                        vm.showClearAlert = true
-                    }
-                    CalcButton(
-                        label: "Negate",
-                        systemImage: "plus.forwardslash.minus",
-                        color: colourLightGrey,
-                        textColor: .white,
-                        customSize: calcBtnSize
-                    ) {
-                        vm.toggleNegate()
-                    }
-                    CalcButton(
-                        label: "Ans",
-                        color: colourLightGrey,
-                        textColor: .white,
-                        customSize: calcBtnSize
-                    ) {
-                        vm.recallResult()
-                    }
-                    CalcButton(
-                        label: "Divide",
-                        systemImage: "divide",
-                        color: colourOrange,
-                        textColor: .white,
-                        customSize: calcBtnSize,
-                        isActive: vm.pendingOperation == .divide
-                    ) { vm.setOperation(.divide) }
-                }
+        // Clamp the size.
+        let finalSize = min(85.0, max(0.0, rawSize))
+
+        // Broken into Groups to help the compiler.
+        return VStack(spacing: 16) {
+            Group {
+                rowOne(size: finalSize)
+                rowTwo(size: finalSize)
             }
-
-            // ROW 2
-            HStack(spacing: buttonSpacing) {
-                CalcButton(
-                    label: "7",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("7") }
-                CalcButton(
-                    label: "8",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("8") }
-                CalcButton(
-                    label: "9",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("9") }
-                if vm.mode == .calc {
-                    CalcButton(
-                        label: "Multiply",
-                        systemImage: "multiply",
-                        color: colourOrange,
-                        textColor: .white,
-                        customSize: calcBtnSize,
-                        isActive: vm.pendingOperation == .multiply
-                    ) { vm.setOperation(.multiply) }
-                } else {
-                    Spacer().frame(width: calcBtnSize)
-                }
-            }
-
-            // ROW 3
-            HStack(spacing: buttonSpacing) {
-                CalcButton(
-                    label: "4",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("4") }
-                CalcButton(
-                    label: "5",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("5") }
-                CalcButton(
-                    label: "6",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("6") }
-                if vm.mode == .calc {
-                    CalcButton(
-                        label: "Minus",
-                        systemImage: "minus",
-                        color: colourOrange,
-                        textColor: .white,
-                        customSize: calcBtnSize,
-                        isActive: vm.pendingOperation == .subtract
-                    ) { vm.setOperation(.subtract) }
-                } else {
-                    Spacer().frame(width: calcBtnSize)
-                }
-            }
-
-            // ROW 4
-            HStack(spacing: buttonSpacing) {
-                CalcButton(
-                    label: "1",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("1") }
-                CalcButton(
-                    label: "2",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("2") }
-                CalcButton(
-                    label: "3",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("3") }
-                if vm.mode == .calc {
-                    CalcButton(
-                        label: "Plus",
-                        systemImage: "plus",
-                        color: colourOrange,
-                        textColor: .white,
-                        customSize: calcBtnSize,
-                        isActive: vm.pendingOperation == .add
-                    ) { vm.setOperation(.add) }
-                } else {
-                    Spacer().frame(width: calcBtnSize)
-                }
-            }
-
-            // ROW 5
-            HStack(spacing: buttonSpacing) {
-                CalcButton(
-                    label: "00",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("00") }
-                CalcButton(
-                    label: "0",
-                    color: colourDarkGrey,
-                    customSize: calcBtnSize
-                ) { vm.addDigit("0") }
-                CalcButton(
-                    label: "Backspace",
-                    systemImage: "delete.left",
-                    color: colourLightGrey,
-                    textColor: .white,
-                    customSize: calcBtnSize
-                ) { vm.backspace() }
-                if vm.mode == .calc {
-                    CalcButton(
-                        label: "Equals",
-                        systemImage: "equal",
-                        color: colourOrange,
-                        textColor: .white,
-                        customSize: calcBtnSize
-                    ) {
-                        vm.calculateResult()
-                    }
-                } else {
-                    Spacer().frame(width: calcBtnSize)
-                }
+            Group {
+                rowThree(size: finalSize)
+                rowFour(size: finalSize)
+                rowFive(size: finalSize)
             }
         }
         .frame(maxWidth: .infinity)
+    }
+
+// MARK: - KEYPAD ROWS
+
+    @ViewBuilder
+    private func rowOne(size: CGFloat) -> some View {
+        if vm.mode == .calc {
+            HStack(spacing: buttonSpacing) {
+                CalcButton(
+                    label: "AC",
+                    color: colourLightGrey,
+                    textColor: .white,
+                    customSize: size
+                ) {
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
+                    vm.showClearAlert = true
+                }
+                CalcButton(
+                    label: "Negate",
+                    systemImage: "plus.forwardslash.minus",
+                    color: colourLightGrey,
+                    textColor: .white,
+                    customSize: size
+                ) { vm.toggleNegate() }
+                CalcButton(
+                    label: "Ans",
+                    color: colourLightGrey,
+                    textColor: .white,
+                    customSize: size
+                ) { vm.recallResult() }
+                CalcButton(
+                    label: "Divide",
+                    systemImage: "divide",
+                    color: colourOrange,
+                    textColor: .white,
+                    customSize: size,
+                    isActive: vm.pendingOperation == .divide
+                ) { vm.setOperation(.divide) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func rowTwo(size: CGFloat) -> some View {
+        HStack(spacing: buttonSpacing) {
+            CalcButton(label: "7", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("7")
+            }
+            CalcButton(label: "8", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("8")
+            }
+            CalcButton(label: "9", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("9")
+            }
+            if vm.mode == .calc {
+                CalcButton(
+                    label: "Multiply",
+                    systemImage: "multiply",
+                    color: colourOrange,
+                    textColor: .white,
+                    customSize: size,
+                    isActive: vm.pendingOperation == .multiply
+                ) { vm.setOperation(.multiply) }
+            } else {
+                Spacer().frame(width: size)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func rowThree(size: CGFloat) -> some View {
+        HStack(spacing: buttonSpacing) {
+            CalcButton(label: "4", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("4")
+            }
+            CalcButton(label: "5", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("5")
+            }
+            CalcButton(label: "6", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("6")
+            }
+            if vm.mode == .calc {
+                CalcButton(
+                    label: "Minus",
+                    systemImage: "minus",
+                    color: colourOrange,
+                    textColor: .white,
+                    customSize: size,
+                    isActive: vm.pendingOperation == .subtract
+                ) { vm.setOperation(.subtract) }
+            } else {
+                Spacer().frame(width: size)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func rowFour(size: CGFloat) -> some View {
+        HStack(spacing: buttonSpacing) {
+            CalcButton(label: "1", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("1")
+            }
+            CalcButton(label: "2", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("2")
+            }
+            CalcButton(label: "3", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("3")
+            }
+            if vm.mode == .calc {
+                CalcButton(
+                    label: "Plus",
+                    systemImage: "plus",
+                    color: colourOrange,
+                    textColor: .white,
+                    customSize: size,
+                    isActive: vm.pendingOperation == .add
+                ) { vm.setOperation(.add) }
+            } else {
+                Spacer().frame(width: size)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func rowFive(size: CGFloat) -> some View {
+        HStack(spacing: buttonSpacing) {
+            CalcButton(label: "00", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("00")
+            }
+            CalcButton(label: "0", color: colourDarkGrey, customSize: size) {
+                vm.addDigit("0")
+            }
+            CalcButton(
+                label: "Backspace",
+                systemImage: "delete.left",
+                color: colourLightGrey,
+                textColor: .white,
+                customSize: size
+            ) { vm.backspace() }
+            if vm.mode == .calc {
+                CalcButton(
+                    label: "Equals",
+                    systemImage: "equal",
+                    color: colourOrange,
+                    textColor: .white,
+                    customSize: size
+                ) { vm.calculateResult() }
+            } else {
+                Spacer().frame(width: size)
+            }
+        }
     }
 
 // MARK: - DISPLAY VIEWS
@@ -548,15 +579,16 @@ extension ContentView {
             ScrollViewReader { proxy in
                 VStack(alignment: .trailing, spacing: isPad ? 12 : 8) {
                     Spacer(minLength: 40)
-                    ForEach(vm.tickerTape, id: \.self) { line in
-                        Text(line).font(
-                            .system(
-                                size: tapeFontSize,
-                                weight: .semibold,
-                                design: .monospaced
-                            )
-                        ).foregroundColor(.green)
+
+                    // HISTORY LINES
+                    // Extract the row to 'tickerTapeRow' below which fixes compiler error.
+                    ForEach(Array(vm.tickerTape.enumerated()), id: \.offset) {
+                        index,
+                        line in
+                        tickerTapeRow(index: index, line: line)
                     }
+
+                    // MAIN DISPLAY
                     Text(vm.getFormattedActiveDisplay())
                         .font(
                             .system(
@@ -569,6 +601,25 @@ extension ContentView {
                         .minimumScaleFactor(0.5)
                         .frame(height: isPad ? 100 : 70)
                         .id("bottom").animation(nil, value: vm.isFramesMode)
+
+                        // MAIN MENU
+                        .contextMenu {
+                            Button {
+                                UIPasteboard.general.string =
+                                    vm.getFormattedActiveDisplay()
+                            } label: {
+                                Label(
+                                    "Copy",
+                                    systemImage: "document.on.document"
+                                )
+                            }
+
+                            Button {
+                                vm.pasteFromClipboard()
+                            } label: {
+                                Label("Paste", systemImage: "paintbrush")
+                            }
+                        }
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing).padding(20)
                 .onChange(of: vm.tickerTape) { _, _ in
@@ -581,56 +632,127 @@ extension ContentView {
         )
     }
 
+// MARK: - EXTRACTED ROW
+
+    @ViewBuilder
+    private func tickerTapeRow(index: Int, line: String) -> some View {
+        Text(line).font(
+            .system(
+                size: tapeFontSize,
+                weight: .semibold,
+                design: .monospaced
+            )
+        ).foregroundColor(.green)
+            .contextMenu {
+                Button {
+                    let clean = line.replacingOccurrences(of: " ", with: "")
+                        .replacingOccurrences(of: "=", with: "")
+                    UIPasteboard.general.string = clean
+                } label: {
+                    Label("Copy", systemImage: "document.on.document")
+                }
+
+                Button(role: .destructive) {
+                    vm.deleteTapeItem(at: index)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+    }
+
+// MARK: - RUN LIST COMPONENTS
+
+    private var runHeaderView: some View {
+        HStack {
+            Text("TRT:").font(.headline).fontWeight(.bold).foregroundColor(
+                .white
+            )
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(vm.runTotalString)
+                    .font(
+                        .system(
+                            size: isPad ? 48 : 32,
+                            weight: .bold,
+                            design: .monospaced
+                        )
+                    ).foregroundColor(.green)
+                    .contextMenu {
+                        Button {
+                            UIPasteboard.general.string = vm.runTotalString
+                        } label: {
+                            Label("Copy", systemImage: "document.on.document")
+                        }
+                    }
+
+                if let realTime = vm.runRealTimeString {
+                    Text(realTime).font(
+                        .system(size: 14, weight: .medium, design: .rounded)
+                    ).foregroundColor(.gray)
+                }
+            }
+        }
+        .padding()
+        .background(colourDarkGrey)
+        .cornerRadius(12)
+        .padding(.bottom, 5)
+    }
+
+    @ViewBuilder
+    private func runListRow(index: Int, entry: Segment) -> some View {
+        HStack {
+            Text("#\(index + 1)").font(.caption).foregroundColor(.white)
+                .frame(width: 30, alignment: .leading)
+            VStack(alignment: .leading) {
+                Text("IN:  \(entry.inPoint)")
+                Text("OUT: \(entry.outPoint)")
+            }
+            .font(.system(.caption, design: .monospaced))
+            .foregroundColor(.white)
+            Spacer()
+            Text(entry.durationString).font(
+                .system(.body, design: .monospaced)
+            ).fontWeight(.bold).foregroundColor(.orange)
+        }
+        .listRowBackground(Color.black).listRowSeparatorTint(.gray)
+        .contextMenu {
+            Button {
+                UIPasteboard.general.string = entry.durationString
+            } label: {
+                Label("Copy Duration", systemImage: "document.on.document")
+            }
+            Button {
+                let text =
+                    "Segment: \(index + 1)\nIn: \(entry.inPoint)\nOut: \(entry.outPoint)\nDur: \(entry.durationString)"
+                UIPasteboard.general.string = text
+            } label: {
+                Label("Copy Details", systemImage: "document.on.document.fill")
+            }
+            Button(role: .destructive) {
+                if vm.runList.indices.contains(index) {
+                    vm.runList.remove(at: index)
+                }
+            } label: {
+                Label("Delete Segment", systemImage: "trash")
+            }
+        }
+    }
+
     private var runListView: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("TRT:").font(.headline).fontWeight(.bold).foregroundColor(
-                    .white
-                )
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(vm.runTotalString)
-                        .font(
-                            .system(
-                                size: isPad ? 48 : 32,
-                                weight: .bold,
-                                design: .monospaced
-                            )
-                        ).foregroundColor(.green)
-                    if let realTime = vm.runRealTimeString {
-                        Text(realTime).font(
-                            .system(size: 14, weight: .medium, design: .rounded)
-                        ).foregroundColor(.gray)
-                    }
-                }
-            }.padding().background(colourDarkGrey).cornerRadius(12).padding(
-                .bottom,
-                5
-            )
+            runHeaderView
 
             List {
                 ForEach(Array(vm.runList.enumerated()), id: \.element) {
                     index,
                     entry in
-                    HStack {
-                        Text("#\(index + 1)").font(.caption).foregroundColor(
-                            .white
-                        ).frame(width: 30, alignment: .leading)
-                        VStack(alignment: .leading) {
-                            Text("IN:  \(entry.inPoint)")
-                            Text("OUT: \(entry.outPoint)")
-                        }
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.white)
-                        Spacer()
-                        Text(entry.durationString).font(
-                            .system(.body, design: .monospaced)
-                        ).fontWeight(.bold).foregroundColor(.orange)
-                    }.listRowBackground(Color.black).listRowSeparatorTint(.gray)
-                }.onDelete { indexSet in
+                    runListRow(index: index, entry: entry)
+                }
+                .onDelete { indexSet in
                     vm.runList.remove(atOffsets: indexSet)
                 }
-            }.listStyle(.plain)
+            }
+            .listStyle(.plain)
         }
     }
 
@@ -668,6 +790,14 @@ extension ContentView {
                         )
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .animation(nil, value: vm.isFramesMode)
+                        // INPUT CONTEXT MENU
+                        .contextMenu {
+                            Button {
+                                vm.pasteFromClipboard()
+                            } label: {
+                                Label("Paste", systemImage: "paintbrush")
+                            }
+                        }
                 }.frame(maxWidth: .infinity).padding().background(
                     colourDarkGrey
                 ).cornerRadius(12)
@@ -690,6 +820,8 @@ extension ContentView {
                         Text("TO:").font(.headline).fontWeight(.bold)
                             .foregroundColor(.white)
                     }
+
+                    // MARK: - RESULT TEXT
                     Text(vm.convResultString)
                         .font(
                             .system(
@@ -703,6 +835,15 @@ extension ContentView {
                         )
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .animation(nil, value: vm.isFramesMode)
+                        .contextMenu {
+                            Button {
+                                UIPasteboard.general.string =
+                                    vm.convResultString
+                            } label: {
+                                Label("Copy", systemImage: "document.on.document")
+                            }
+                        }
+
                 }.frame(maxWidth: .infinity).padding().background(
                     colourDarkGrey
                 ).cornerRadius(12)
@@ -710,7 +851,6 @@ extension ContentView {
             }
         }
     }
-
 // MARK: - INPUT COMPONENT
 
     private var runInputArea: some View {
@@ -818,7 +958,62 @@ extension ContentView {
     }
 }
 
-// MARK: - PREVIEW
+// MARK: - ISOLATED SHARE BUTTONS
+
+// TXT button in SwiftUI
+struct TextShareButton: View {
+    let text: String
+
+    var body: some View {
+        ShareLink(item: text) {
+            Label("Save as TXT", systemImage: "text.document")
+        }
+    }
+}
+
+// CSV button in UIKit to guarantee File handling
+struct CSVShareButton: View {
+    let url: URL
+
+    var body: some View {
+        Button(action: {
+            shareFile(url)
+        }) {
+            Label("Save as CSV", systemImage: "tablecells")
+        }
+    }
+
+    // Manually trigger the native Share Sheet
+    func shareFile(_ url: URL) {
+        let activityVC = UIActivityViewController(
+            activityItems: [url],
+            applicationActivities: nil
+        )
+
+        // Find the active window to present from
+        if let windowScene = UIApplication.shared.connectedScenes.first
+            as? UIWindowScene,
+            let rootVC = windowScene.windows.first?.rootViewController
+        {
+
+            // iPad and Mac popovers need an anchor
+            if let popover = activityVC.popoverPresentationController {
+                popover.sourceView = rootVC.view
+                popover.sourceRect = CGRect(
+                    x: rootVC.view.bounds.midX,
+                    y: rootVC.view.bounds.midY,
+                    width: 0,
+                    height: 0
+                )
+                popover.permittedArrowDirections = []
+            }
+
+            rootVC.present(activityVC, animated: true)
+        }
+    }
+}
+
+// MARK: - CANVAS
 
 #Preview {
     ContentView(vm: AppViewModel())
