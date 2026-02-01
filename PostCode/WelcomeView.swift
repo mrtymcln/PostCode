@@ -4,7 +4,7 @@ struct WelcomeView: View {
     var onContinue: () -> Void
 
 // MARK: - MAIN VIEW
-
+    
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()

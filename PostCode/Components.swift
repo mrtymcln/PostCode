@@ -13,10 +13,10 @@ struct CalcButton: View {
     var isActive: Bool = false
     let action: () -> Void
 
-    // Haptic State
+    // Haptic state.
     @State private var feedbackTrigger = false
 
-    // Determine sound as per button type
+    // Determine sound as per button type.
     private var soundID: SystemSoundID {
         if label == "Backspace" || systemImage == "delete.left" {
             return 1155
@@ -31,13 +31,13 @@ struct CalcButton: View {
 
     var body: some View {
         Button(action: {
-            // Play sound as per button type
+            // Play sound as per button type.
             AudioServicesPlaySystemSound(soundID)
 
-            // Trigger button haptics
+            // Trigger button haptics.
             feedbackTrigger.toggle()
 
-            // Perform button action
+            // Perform button action.
             action()
 
         }) {
@@ -111,7 +111,7 @@ struct ShareLink<Label: View>: View {
             let rootVC = windowScene.windows.first?.rootViewController
         {
 
-            // Fix for iPad Popover
+            // Fix for iPad popover.
             if let popover = av.popoverPresentationController {
                 popover.sourceView = rootVC.view
                 popover.sourceRect = CGRect(

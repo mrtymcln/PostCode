@@ -1,7 +1,7 @@
 import Foundation
 
 // MARK: - SHARED MODELS
-
+    
 struct AppStateSnapshot: Codable, Sendable {
     var mode: AppMode
     var isFramesMode: Bool

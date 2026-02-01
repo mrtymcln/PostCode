@@ -1,11 +1,9 @@
 import Combine
 import SwiftUI
-
 // all data models (AppStateSnapshot, AppMode, etc.) are in TimecodeLogic
 
 // MARK: - UUID FOR SEGMENT REORDER
-extension Segment {
-}
+extension Segment {}
 
 @MainActor
 class AppViewModel: ObservableObject {

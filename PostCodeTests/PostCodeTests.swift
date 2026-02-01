@@ -5,7 +5,7 @@ import XCTest
 final class PostCodeTests: XCTestCase {
 
 // MARK: - FRAME RATE DEFINITIONS
-    
+
     func testDefinitions() {
         // Check 25 frame rate.
         let fps25 = FrameRate.fps25

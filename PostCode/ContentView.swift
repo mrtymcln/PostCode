@@ -37,7 +37,7 @@ struct ContentView: View {
             .onKeyPress { press in handleHardwareKey(press) }
         }
         .ignoresSafeArea(.keyboard)
-        // FIX: Ensure Keypad comes back when switching tabs
+        // Ensure keypad comes back when switching modes.
         .onChange(of: vm.mode) { _, _ in
             runListEditMode = .inactive
         }
