@@ -2,7 +2,7 @@ import AudioToolbox
 import SwiftUI
 
 // MARK: - COMPONENTS
-
+    
 struct CalcButton: View {
     let label: String
     var systemImage: String? = nil

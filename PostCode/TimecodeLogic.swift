@@ -211,7 +211,7 @@ struct TimecodeCalculator {
 
         var totalFrames = (h * 3600 + m * 60 + s) * fps.baseFPS + f
 
-        // --- FIXED DROP FRAME REVERSE LOGIC ---
+        // Drop Frame reverse logic
         if fps.isDropFrame {
             let totalMinutes = h * 60 + m
             let drops = fps.dropFrameCount

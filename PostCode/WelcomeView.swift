@@ -4,10 +4,11 @@ struct WelcomeView: View {
     var onContinue: () -> Void
 
 // MARK: - MAIN VIEW
-    private let appOrange = Color(red: 1.0, green: 0.584, blue: 0.0)
 
     var body: some View {
         ZStack {
+            Color.black.ignoresSafeArea()
+
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 32) {
@@ -17,7 +18,7 @@ struct WelcomeView: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 100, height: 100)
-                                .cornerRadius(22)
+                                .cornerRadius(25)
 
                             VStack(spacing: 8) {
                                 Text("Welcome to PostCode")
@@ -25,12 +26,11 @@ struct WelcomeView: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
                                     .multilineTextAlignment(.center)
-
-                                // Keep the original header text if desired, or remove if redundant
                                 Text(
                                     "Created by Marty McLean\nNew in version 1.1"
                                 )
                                 .font(.subheadline)
+                                .fontWeight(.medium)
                                 .foregroundColor(.gray)
                                 .multilineTextAlignment(.center)
                             }
@@ -39,19 +39,18 @@ struct WelcomeView: View {
 
                         // New features
                         VStack(alignment: .leading, spacing: 24) {
-
                             FeatureRow(
                                 icon: "document.on.document",
-                                color: .blue,
-                                secondaryColor: .white,
+                                color: .red,
+                                secondaryColor: .red,
                                 title: "Copy and Paste",
                                 desc:
                                     "Long-press to copy and paste. PostCode will format automatically."
                             )
                             FeatureRow(
                                 icon: "square.and.arrow.up",
-                                color: .white,
-                                secondaryColor: .blue,
+                                color: .orange,
+                                secondaryColor: .orange,
                                 title: "Export",
                                 desc:
                                     "Save your calculations as TXT or CSV files, for use in external apps."
@@ -64,25 +63,26 @@ struct WelcomeView: View {
                                 .foregroundColor(.gray)
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .padding(.vertical, 8)
+
                             FeatureRow(
                                 icon: "plus.circle",
-                                color: .white,
-                                secondaryColor: .blue,
+                                color: .yellow,
+                                secondaryColor: .yellow,
                                 title: "Calculator Mode",
                                 desc:
                                     "Add, subtract, multiply, and divide timecodes with history."
                             )
                             FeatureRow(
-                                icon: "figure.run.circle",
-                                color: .white,
-                                secondaryColor: .blue,
+                                icon: "figure.run",
+                                color: .green,
+                                secondaryColor: .green,
                                 title: "Run Mode",
                                 desc:
                                     "Enter In and Out points of multiple segments to calculate the total run time."
                             )
                             FeatureRow(
-                                icon: "arrow.up.arrow.down.circle",
-                                color: .white,
+                                icon: "arrow.up.arrow.down",
+                                color: .blue,
                                 secondaryColor: .blue,
                                 title: "Converter Mode",
                                 desc:
@@ -90,16 +90,16 @@ struct WelcomeView: View {
                             )
                             FeatureRow(
                                 icon: "switch.2",
-                                color: .blue,
-                                secondaryColor: .white,
+                                color: .indigo,
+                                secondaryColor: .indigo,
                                 title: "TC / Fr",
                                 desc:
                                     "Toggle between timecode and frame count — perfect for VFX workflows."
                             )
                             FeatureRow(
                                 icon: "film.stack",
-                                color: .blue,
-                                secondaryColor: .white,
+                                color: .purple,
+                                secondaryColor: .purple,
                                 title: "Frame Rates",
                                 desc:
                                     "Supports all SMPTE standard frame rates, as well as custom frame rates."
@@ -109,9 +109,10 @@ struct WelcomeView: View {
                     }
                     .padding(.bottom, 40)
                 }
+                .background(Color(red: 0.10, green: 0.10, blue: 0.10))
 
                 // Continue button
-                VStack {
+                VStack(spacing: 0) {
                     Divider().background(Color.gray.opacity(0.3))
 
                     Button(action: {
@@ -122,29 +123,27 @@ struct WelcomeView: View {
                         onContinue()
                     }) {
                         Text("Continue")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding()
                             .frame(maxWidth: .infinity)
-                            .background(.blue)
-                            .cornerRadius(14)
+                            .fontWeight(.bold)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .tint(.blue)
                     .padding(.horizontal, 24)
-                    .padding(.vertical, 20)
+                    .padding(.vertical, 16)
                 }
-                .background(Color.black.opacity(0.20))
+                .background(Color.black)
             }
         }
     }
 }
 
-// MARK: - SUBVIEWS
+// MARK: - SUB VIEWS
 
 struct FeatureRow: View {
     let icon: String
     let color: Color
-    var secondaryColor: Color? = nil  // 1. Add optional second color
+    var secondaryColor: Color? = nil
     let title: String
     let desc: String
 
@@ -152,11 +151,9 @@ struct FeatureRow: View {
         HStack(alignment: .top, spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 32))
-                // Palette if two colours allowed, otherwise Monochrome
                 .symbolRenderingMode(
                     secondaryColor != nil ? .palette : .monochrome
                 )
-                // Apply the colours
                 .foregroundStyle(color, secondaryColor ?? color)
                 .frame(width: 40)
 

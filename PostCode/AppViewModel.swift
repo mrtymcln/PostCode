@@ -3,6 +3,10 @@ import SwiftUI
 
 // all data models (AppStateSnapshot, AppMode, etc.) are in TimecodeLogic
 
+// MARK: - UUID FOR SEGMENT REORDER
+extension Segment {
+}
+
 @MainActor
 class AppViewModel: ObservableObject {
 
@@ -40,6 +44,7 @@ class AppViewModel: ObservableObject {
     @Published var runInString = ""
     @Published var runOutString = ""
     @Published var activeRunField: RunField = .inPoint
+    
 
 // MARK: - CONV DATA
 
@@ -737,7 +742,9 @@ class AppViewModel: ObservableObject {
                     totalFrames: dur,
                     fps: runFrameRate
                 )
+                // ENSURE UUID() IS GENERATED IF IT DOESN'T EXIST BY DEFAULT
                 let entry = Segment(
+                    id: UUID(), // Explicitly added to safe-guard reordering
                     inPoint: formatInput(runInString, fps: runFrameRate),
                     outPoint: formatInput(runOutString, fps: runFrameRate),
                     durationFrames: dur,
@@ -753,6 +760,11 @@ class AppViewModel: ObservableObject {
                 saveState()
             }
         }
+    }
+
+    func moveRunSegment(from source: IndexSet, to destination: Int) {
+        runList.move(fromOffsets: source, toOffset: destination)
+        saveState()
     }
 
     private func convertHistory(from oldRate: FrameRate, to newRate: FrameRate)

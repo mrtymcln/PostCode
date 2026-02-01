@@ -7,12 +7,12 @@ final class PostCodeTests: XCTestCase {
 // MARK: - FRAME RATE DEFINITIONS
     
     func testDefinitions() {
-        // Check 25.
+        // Check 25 frame rate.
         let fps25 = FrameRate.fps25
         XCTAssertEqual(fps25.baseFPS, 25)
         XCTAssertEqual(fps25.dropFrameCount, 0)
 
-        // Check 29.97 DF.
+        // Check 29.97 DF frame rate.
         let fps29 = FrameRate.fps2997Drop
         XCTAssertEqual(fps29.baseFPS, 30)
         XCTAssertTrue(fps29.isDropFrame)
@@ -22,7 +22,7 @@ final class PostCodeTests: XCTestCase {
             "29.97 DF must drop 2 frames per minute"
         )
 
-        // Check 59.94 DF.
+        // Check 59.94 DF frame rate.
         let fps59 = FrameRate.fps5994Drop
         XCTAssertEqual(fps59.baseFPS, 60)
         XCTAssertTrue(fps59.isDropFrame)
@@ -32,7 +32,7 @@ final class PostCodeTests: XCTestCase {
             "59.94 DF must drop 4 frames per minute"
         )
 
-        // Check custom.
+        // Check custom frame rate.
         let custom14 = FrameRate.custom(14.0)
         XCTAssertEqual(custom14.baseFPS, 14)
         XCTAssertFalse(custom14.isDropFrame)

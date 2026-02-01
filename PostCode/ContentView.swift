@@ -5,12 +5,13 @@ struct ContentView: View {
     @ObservedObject var vm: AppViewModel
     @FocusState private var isViewFocused: Bool
     @State private var showBolt = false
+    @State private var runListEditMode: EditMode = .inactive
 
 // MARK: - CONSTANTS
 
     private let buttonSpacing: CGFloat = 12
     private let colourDarkGrey = Color(white: 0.2)
-    private let colourLightGrey = Color(white: 0.647)
+    private let colourLightGrey = Color(white: 0.600)
     private let colourOrange = Color(red: 1.0, green: 0.584, blue: 0.0)
     private let colourGreen = Color(red: 0.0, green: 1.0, blue: 0.0)
 
@@ -36,11 +37,15 @@ struct ContentView: View {
             .onKeyPress { press in handleHardwareKey(press) }
         }
         .ignoresSafeArea(.keyboard)
+        // FIX: Ensure Keypad comes back when switching tabs
+        .onChange(of: vm.mode) { _, _ in
+            runListEditMode = .inactive
+        }
 
         .sheet(isPresented: $vm.showWelcomeSheet) {
             WelcomeView(onContinue: { vm.markWelcomeComplete() })
-                .interactiveDismissDisabled()  // Prevents swiping away.
-                .preferredColorScheme(.dark)  // Forces dark mode.
+                .interactiveDismissDisabled()
+                .preferredColorScheme(.dark)
 
         }.alert("Custom frame rate", isPresented: $vm.showCustomFpsAlert) {
             TextField(" 1-999", text: $vm.customFpsInput)
@@ -48,7 +53,7 @@ struct ContentView: View {
 
             Button("Cancel", role: .cancel) {}
             Button("OK") {
-                // Check for the easter egg.
+                // Check for the easter egg...
                 let codes = ["14", "88", "1488"]
                 if codes.contains(vm.customFpsInput) {
                     withAnimation(.easeIn(duration: 0.2)) { showBolt = true }
@@ -252,64 +257,74 @@ extension ContentView {
 // MARK: - IPHONE LAYOUT
 
     private func iphoneLayout(width: CGFloat, height: CGFloat) -> some View {
-        VStack(spacing: 0) {
-            headerView.padding(.top, 10).padding(.bottom, 8).background(
-                Color.black
-            ).zIndex(20)
-            ZStack {
-                if vm.mode == .calc {
-                    tickerTapeView
-                } else if vm.mode == .run {
-                    runListView
-                } else {
-                    converterDisplayView
+            VStack(spacing: 0) {
+                headerView.padding(.top, 10).padding(.bottom, 8).background(
+                    Color.black
+                ).zIndex(20)
+
+                ZStack {
+                    if vm.mode == .calc {
+                        tickerTapeView
+                    } else if vm.mode == .run {
+                        runListView
+                    } else {
+                        converterDisplayView
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture { isViewFocused = true }
+                .padding(.horizontal, 16).padding(.bottom, 10)
+
+                // 1. INPUT AREA (Slides up screen or down screen)
+                if vm.mode == .run {
+                    runInputArea.padding(.horizontal, 16).padding(.bottom, 10)
+                        .zIndex(10) // Ensure this sits on top
+                }
+
+                // 2. KEYPAD (Slides off screen)
+                if runListEditMode == .inactive {
+                    keypadLayout(width: width).padding(.bottom, 20)
+                        .transition(.move(edge: .bottom))
+                        .zIndex(5) // Sits behind input area
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-            .onTapGesture { isViewFocused = true }
-            .padding(.horizontal, 16).padding(.bottom, 10)
-
-            if vm.mode == .run {
-                runInputArea.padding(.horizontal, 16).padding(.bottom, 10)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-            keypadLayout(width: width).padding(.bottom, 20)
+            .frame(width: width)
+            // 3. ANIMATION
+            // Using easeInOut creates tighter animation between the slide and the vanish
+            .animation(.easeInOut(duration: 0.3), value: runListEditMode)
         }
-        .frame(width: width)
-    }
 
     // 1. HEADER
-    private var headerView: some View {
-        HStack(spacing: 8) {
-            // A. Mode Toggle (iPhone Only)
-            if !isPad {
-                modeToggleButton
+        private var headerView: some View {
+            HStack(spacing: 8) {
+                // A. Mode Toggle (iPhone Only)
+                if !isPad {
+                    modeToggleButton
+                }
+
+                // B. Frame Rate Selector
+                if vm.mode != .conv {
+                    frameRateMenu
+                }
+
+                // C. TC / FR Toggle
+                displayModeToggleButton
+
+                Spacer()
+
+                // D. Share and Clear
+                actionButtons
             }
-
-            // B. Frame Rate Selector
-            if vm.mode != .conv {
-                frameRateMenu
+            .padding(.horizontal, isPad ? 0 : 20)
+            .alert(
+                "Clear all? This cannot be undone.",
+                isPresented: $vm.showClearAlert
+            ) {
+                Button("Cancel", role: .cancel) {}
+                Button("Clear", role: .destructive) { vm.clearAll() }
             }
-
-            // C. TC / FR Toggle
-            displayModeToggleButton
-
-            Spacer()
-
-            // D. Share and Clear
-            actionButtons
         }
-        .padding(.horizontal, isPad ? 0 : 20)
-        .alert(
-            "Clear all? This cannot be undone.",
-            isPresented: $vm.showClearAlert
-        ) {
-            Button("Cancel", role: .cancel) {}
-            Button("Clear", role: .destructive) { vm.clearAll() }
-        }
-    }
-
 // MARK: - HEADER SUBVIEWS
 
     private var modeToggleButton: some View {
@@ -699,63 +714,82 @@ extension ContentView {
     }
 
     @ViewBuilder
-    private func runListRow(index: Int, entry: Segment) -> some View {
-        HStack {
-            Text("#\(index + 1)").font(.caption).foregroundColor(.white)
-                .frame(width: 30, alignment: .leading)
-            VStack(alignment: .leading) {
-                Text("IN:  \(entry.inPoint)")
-                Text("OUT: \(entry.outPoint)")
-            }
-            .font(.system(.caption, design: .monospaced))
-            .foregroundColor(.white)
-            Spacer()
-            Text(entry.durationString).font(
-                .system(.body, design: .monospaced)
-            ).fontWeight(.bold).foregroundColor(.orange)
-        }
-        .listRowBackground(Color.black).listRowSeparatorTint(.gray)
-        .contextMenu {
-            Button {
-                UIPasteboard.general.string = entry.durationString
-            } label: {
-                Label("Copy Duration", systemImage: "document.on.document")
-            }
-            Button {
-                let text =
-                    "Segment: \(index + 1)\nIn: \(entry.inPoint)\nOut: \(entry.outPoint)\nDur: \(entry.durationString)"
-                UIPasteboard.general.string = text
-            } label: {
-                Label("Copy Details", systemImage: "document.on.document.fill")
-            }
-            Button(role: .destructive) {
-                if vm.runList.indices.contains(index) {
-                    vm.runList.remove(at: index)
+        private func runListRow(index: Int, entry: Segment) -> some View {
+            HStack {
+                Text("#\(index + 1)").font(.caption).foregroundColor(.white)
+                    .frame(width: 30, alignment: .leading)
+                VStack(alignment: .leading) {
+                    Text("IN:  \(entry.inPoint)")
+                    Text("OUT: \(entry.outPoint)")
                 }
-            } label: {
-                Label("Delete Segment", systemImage: "trash")
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(.white)
+                Spacer()
+                Text(entry.durationString).font(
+                    .system(.body, design: .monospaced)
+                ).fontWeight(.bold).foregroundColor(.orange)
+            }
+            .listRowBackground(Color.black).listRowSeparatorTint(.gray)
+            .contextMenu {
+                // 1. COPY OPTIONS
+                Button {
+                    UIPasteboard.general.string = entry.durationString
+                } label: {
+                    Label("Copy Duration", systemImage: "document.on.document")
+                }
+                Button {
+                    let text =
+                        "Segment: \(index + 1)\nIn: \(entry.inPoint)\nOut: \(entry.outPoint)\nDur: \(entry.durationString)"
+                    UIPasteboard.general.string = text
+                } label: {
+                    Label("Copy Details", systemImage: "document.on.document.fill")
+                }
+               
+                Divider()
+               
+                // 2. REORDER SEG OPTION
+                Button {
+                    withAnimation { runListEditMode = .active }
+                } label: {
+                    Label("Reorder Segment", systemImage: "arrow.up.arrow.down")
+                }
+               
+                Divider()
+               
+                // 3. DELETE SEG OPTION
+                Button(role: .destructive) {
+                    if vm.runList.indices.contains(index) {
+                        vm.runList.remove(at: index)
+                    }
+                } label: {
+                    Label("Delete Segment", systemImage: "trash")
+                }
             }
         }
-    }
 
     private var runListView: some View {
-        VStack(spacing: 0) {
-            runHeaderView
-
-            List {
-                ForEach(Array(vm.runList.enumerated()), id: \.element) {
-                    index,
-                    entry in
-                    runListRow(index: index, entry: entry)
+            VStack(spacing: 0) {
+                runHeaderView
+               
+                List {
+                    ForEach(vm.runList) { entry in
+                        let index = vm.runList.firstIndex(where: { $0.id == entry.id }) ?? 0
+                        runListRow(index: index, entry: entry)
+                    }
+                    // 1. CONDITIONAL DELETE
+                    // Only attach the delete logic if not reordering. Removes red circle button when in EditMode.
+                    .onDelete(perform: runListEditMode == .active ? nil : { indexSet in
+                        vm.runList.remove(atOffsets: indexSet)
+                    })
+                    .onMove { source, destination in
+                        vm.moveRunSegment(from: source, to: destination)
+                    }
                 }
-                .onDelete { indexSet in
-                    vm.runList.remove(atOffsets: indexSet)
-                }
+                .listStyle(.plain)
+                .environment(\.editMode, $runListEditMode)
             }
-            .listStyle(.plain)
         }
-    }
-
+    
     private var converterDisplayView: some View {
         ScrollView {
             VStack(spacing: isPad ? 48 : 32) {
@@ -851,45 +885,80 @@ extension ContentView {
             }
         }
     }
-// MARK: - INPUT COMPONENT
+// MARK: - RUN INPUT COMPONENTS
 
     private var runInputArea: some View {
-        HStack(spacing: 12) {
-            RunInputField(
-                label: "IN:",
-                value: vm.formatInput(vm.runInString),
-                isActive: vm.activeRunField == .inPoint
-            )
-            .onTapGesture {
-                DispatchQueue.main.async {
-                    vm.activeRunField = .inPoint
+            HStack(spacing: 12) {
+               
+                // 1. CONDITIONAL INPUT FIELDS
+                if runListEditMode == .inactive {
+                    Group {
+                        RunInputField(
+                            label: "IN:",
+                            value: vm.formatInput(vm.runInString),
+                            isActive: vm.activeRunField == .inPoint
+                        )
+                        .onTapGesture {
+                            DispatchQueue.main.async { vm.activeRunField = .inPoint }
+                        }
+                       
+                        RunInputField(
+                            label: "OUT:",
+                            value: vm.formatInput(vm.runOutString),
+                            isActive: vm.activeRunField == .outPoint
+                        )
+                        .onTapGesture {
+                            DispatchQueue.main.async { vm.activeRunField = .outPoint }
+                        }
+                    }
+                    .transition(.opacity)
+                } else {
+                    // 2. TOOL TIP
+                    Spacer()
+                    Text("Drag segments to reorder")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .transition(.opacity)
+                    Spacer()
+                }
+               
+                // 3. DYNAMIC BUTTON
+                if runListEditMode == .active {
+                    // Tick for reorder mode
+                    Button(action: {
+                        withAnimation { runListEditMode = .inactive }
+                    }) {
+                        Image(systemName: "checkmark")
+                            .font(.title2).bold()
+                            .foregroundColor(.white)
+                            .frame(width: 50, height: 50)
+                            .background(.green)
+                            .clipShape(Circle())
+                    }
+                    .transition(.scale.combined(with: .opacity))
+                } else {
+                    // Plus for normal mode
+                    Button(action: {
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                        vm.addSegment()
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title2).bold()
+                            .foregroundColor(.white)
+                            .frame(width: 50, height: 50)
+                            .background(colourOrange)
+                            .clipShape(Circle())
+                    }
+                    .transition(.scale.combined(with: .opacity))
                 }
             }
-            RunInputField(
-                label: "OUT:",
-                value: vm.formatInput(vm.runOutString),
-                isActive: vm.activeRunField == .outPoint
-            )
-            .onTapGesture {
-                DispatchQueue.main.async {
-                    vm.activeRunField = .outPoint
-                }
-            }
-            Button(action: {
-                let generator = UIImpactFeedbackGenerator(style: .medium)
-                generator.impactOccurred()
-                vm.addSegment()
-            }) {
-                Image(systemName: "plus").font(.title2).bold().foregroundColor(
-                    .white
-                )
-                .frame(width: 50, height: 50).background(colourOrange)
-                .clipShape(Circle())
-            }
+            .padding(.vertical, 8)
+            .padding(.horizontal)
+            .background(colourDarkGrey)
+            .cornerRadius(12)
+            .animation(.default, value: runListEditMode)
         }
-        .padding(.vertical, 8).padding(.horizontal).background(colourDarkGrey)
-        .cornerRadius(12)
-    }
 
 // MARK: - HARDWARE KEYBOARD
 
