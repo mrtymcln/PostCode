@@ -137,7 +137,7 @@ struct RunInputField: View {
             Text(label).font(.caption).bold().foregroundColor(.white)
             Text(value.isEmpty ? "00:00:00:00" : value)
                 .font(.system(.body, design: .monospaced))
-                .foregroundColor(isActive ? .green : .white)
+                .foregroundColor(isActive ? .white : .white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(8)
