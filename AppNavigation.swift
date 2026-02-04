@@ -46,6 +46,8 @@ struct AppSidebar: View {
 
 struct AppHeader: View {
     @ObservedObject var vm: AppViewModel
+    // NEW: Binding to control the Done button state
+    @Binding var runListEditMode: EditMode
     let isPad: Bool
 
     var body: some View {
@@ -59,6 +61,8 @@ struct AppHeader: View {
                         color: NavTheme.buttonColor
                     )
                 }
+                .disabled(runListEditMode == .active)
+                .opacity(runListEditMode == .active ? 0.3 : 1.0)
             }
 
             // B. Frame Rate button
@@ -87,6 +91,8 @@ struct AppHeader: View {
                         icon: "chevron.up.chevron.down"
                     )
                 }
+                .disabled(runListEditMode == .active)
+                .opacity(runListEditMode == .active ? 0.3 : 1.0)
             }
 
             // C. Timecode/Frames button
@@ -101,10 +107,9 @@ struct AppHeader: View {
 
             Spacer()
 
-            // D. Share/Delete buttons
+            // D. Share/Delete OR Done button
             actionButtons
         }
-        // FIX: Add horizontal padding for iPhone (iPad handles its own in ContentView)
         .padding(.horizontal, isPad ? 0 : 16)
         // Delete alert
         .alert(
@@ -118,31 +123,48 @@ struct AppHeader: View {
 
     private var actionButtons: some View {
         HStack(spacing: 16) {
-            if vm.mode == .run {
-                Menu {
-                    TextShareButton(text: vm.exportText)
-                    CSVShareButton(url: vm.generateCSV())
-                } label: {
-                    Image(systemName: "square.and.arrow.up").font(
-                        .system(size: 20, weight: .semibold)
-                    ).foregroundColor(.white)
+            // SHOW "DONE" BUTTON IF REORDERING
+            if runListEditMode == .active {
+                Button(action: {
+                    withAnimation { runListEditMode = .inactive }
+                }) {
+                    PillLabel(
+                        text: "Done",
+                        icon: "checkmark",
+                        color: NavTheme.buttonColor // UPDATED: Matches other pills (Grey)
+                    )
                 }
+                .transition(.scale.combined(with: .opacity))
             } else {
-                ShareLink(item: vm.exportText) {
-                    Image(systemName: "square.and.arrow.up").font(
-                        .system(size: 20, weight: .semibold)
-                    ).foregroundColor(.white)
+                // STANDARD BUTTONS
+                Group {
+                    if vm.mode == .run {
+                        Menu {
+                            TextShareButton(text: vm.exportText)
+                            CSVShareButton(url: vm.generateCSV())
+                        } label: {
+                            Image(systemName: "square.and.arrow.up").font(
+                                .system(size: 20, weight: .semibold)
+                            ).foregroundColor(.white)
+                        }
+                    } else {
+                        ShareLink(item: vm.exportText) {
+                            Image(systemName: "square.and.arrow.up").font(
+                                .system(size: 20, weight: .semibold)
+                            ).foregroundColor(.white)
+                        }
+                    }
+                    Button(action: {
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                        vm.handleTrashTap()
+                    }) {
+                        Image(systemName: "trash").font(
+                            .system(size: 20, weight: .semibold)
+                        ).foregroundColor(.red).frame(width: 44, height: 44)
+                    }
                 }
-            }
-            Button(action: {
-                let generator = UIImpactFeedbackGenerator(style: .medium)
-                generator.impactOccurred()
-                // Use smart handler instead of direct toggle
-                vm.handleTrashTap()
-            }) {
-                Image(systemName: "trash").font(
-                    .system(size: 20, weight: .semibold)
-                ).foregroundColor(.red).frame(width: 44, height: 44)
+                .transition(.opacity)
             }
         }
     }

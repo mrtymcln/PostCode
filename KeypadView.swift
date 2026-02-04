@@ -51,7 +51,6 @@ struct KeypadView: View {
                 ) {
                     let generator = UIImpactFeedbackGenerator(style: .medium)
                     generator.impactOccurred()
-                    // CHANGED: Smart handler for AC button
                     vm.handleTrashTap()
                 }
                 CalcButton(
@@ -241,71 +240,46 @@ struct RunInputArea: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            if editMode == .inactive {
-                Group {
-                    RunInputField(
-                        label: "IN:",
-                        value: vm.formatInput(vm.runInString),
-                        isActive: vm.activeRunField == .inPoint
-                    )
-                    .onTapGesture {
-                        DispatchQueue.main.async {
-                            vm.activeRunField = .inPoint
-                        }
-                    }
-
-                    RunInputField(
-                        label: "OUT:",
-                        value: vm.formatInput(vm.runOutString),
-                        isActive: vm.activeRunField == .outPoint
-                    )
-                    .onTapGesture {
-                        DispatchQueue.main.async {
-                            vm.activeRunField = .outPoint
-                        }
-                    }
+            // INPUT FIELDS (No conditional hide/show, handled by parent)
+            RunInputField(
+                label: "IN:",
+                value: vm.formatInput(vm.runInString),
+                isActive: vm.activeRunField == .inPoint
+            )
+            .onTapGesture {
+                DispatchQueue.main.async {
+                    vm.activeRunField = .inPoint
                 }
-                .transition(.opacity)
-            } else {
-                Spacer()
-                Text("Drag segments to reorder")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .transition(.opacity)
-                Spacer()
             }
 
-            // Action Button (Checkmark or Plus)
-            if editMode == .active {
-                Button(action: { withAnimation { editMode = .inactive } }) {
-                    Image(systemName: "checkmark")
-                        .font(.title2).bold()
-                        .foregroundColor(.white)
-                        .frame(width: 50, height: 50)
-                        .background(KeypadTheme.green)
-                        .clipShape(Circle())
+            RunInputField(
+                label: "OUT:",
+                value: vm.formatInput(vm.runOutString),
+                isActive: vm.activeRunField == .outPoint
+            )
+            .onTapGesture {
+                DispatchQueue.main.async {
+                    vm.activeRunField = .outPoint
                 }
-                .transition(.scale.combined(with: .opacity))
-            } else {
-                Button(action: {
-                    let generator = UIImpactFeedbackGenerator(style: .medium)
-                    generator.impactOccurred()
-                    vm.addSegment()
-                }) {
-                    Image(systemName: "plus")
-                        .font(.title2).bold()
-                        .foregroundColor(.white)
-                        .frame(width: 50, height: 50)
-                        .background(KeypadTheme.orange)
-                        .clipShape(Circle())
-                }
-                .transition(.scale.combined(with: .opacity))
+            }
+
+            // ADD BUTTON (Checkmark is now in Header)
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+                vm.addSegment()
+            }) {
+                Image(systemName: "plus")
+                    .font(.title2).bold()
+                    .foregroundColor(.white)
+                    .frame(width: 50, height: 50)
+                    .background(KeypadTheme.orange)
+                    .clipShape(Circle())
             }
         }
         .padding(.vertical, 8)
         .padding(.horizontal)
         .background(KeypadTheme.darkGrey)
         .cornerRadius(12)
-        .animation(.default, value: editMode)
     }
 }

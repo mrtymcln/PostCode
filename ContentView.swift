@@ -1,4 +1,3 @@
-// ContentView.swift
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -115,7 +114,7 @@ extension ContentView {
 
                         // B. CONSOLE AREA
                         VStack(spacing: 0) {
-                            AppHeader(vm: vm, isPad: true)
+                            AppHeader(vm: vm, runListEditMode: $runListEditMode, isPad: true)
                                 .padding(.vertical, 30).padding(.horizontal, 30)
                                 .zIndex(10)
                             Spacer()
@@ -163,7 +162,7 @@ extension ContentView {
                         ).opacity(0.15)
 
                         VStack(spacing: 0) {
-                            AppHeader(vm: vm, isPad: true)
+                            AppHeader(vm: vm, runListEditMode: $runListEditMode, isPad: true)
                                 .padding(.vertical, 20).padding(.horizontal, 20)
                             Spacer()
                             if vm.mode == .run {
@@ -188,7 +187,7 @@ extension ContentView {
 // MARK: - IPHONE LAYOUT
     private func iphoneLayout(width: CGFloat, height: CGFloat) -> some View {
         VStack(spacing: 0) {
-            AppHeader(vm: vm, isPad: false)
+            AppHeader(vm: vm, runListEditMode: $runListEditMode, isPad: false)
                 .padding(.top, 10).padding(.bottom, 8)
                 .background(Color.black).zIndex(20)
 
@@ -205,20 +204,27 @@ extension ContentView {
             .contentShape(Rectangle())
             .onTapGesture { isViewFocused = true }
             .padding(.horizontal, 16).padding(.bottom, 10)
+            .zIndex(0)
 
-            if vm.mode == .run {
-                RunInputArea(vm: vm, editMode: $runListEditMode)
-                    .padding(.horizontal, 16).padding(.bottom, 10).zIndex(10)
-            }
-
+            // UPDATED: Combined Container for Keypad + Input Area
+            // This ensures they slide together as one solid unit.
             if runListEditMode == .inactive {
-                KeypadView(vm: vm, width: width)
-                    .padding(.bottom, 20)
-                    .transition(.move(edge: .bottom)).zIndex(5)
+                VStack(spacing: 0) {
+                    if vm.mode == .run {
+                        RunInputArea(vm: vm, editMode: $runListEditMode)
+                            .padding(.horizontal, 16).padding(.bottom, 10)
+                    }
+                    KeypadView(vm: vm, width: width)
+                        .padding(.bottom, 20)
+                }
+                .background(Color.black) // Opaque bg prevents see-through during slide
+                .transition(.move(edge: .bottom))
+                .zIndex(1)
             }
         }
         .frame(width: width)
-        .animation(.easeInOut(duration: 0.3), value: runListEditMode)
+        // UPDATED: Use easeInOut for smoother slide (removes the springy jitter on edges)
+        .animation(.easeInOut(duration: 0.35), value: runListEditMode)
     }
 
 // MARK: - HARDWARE KEY HANDLING
