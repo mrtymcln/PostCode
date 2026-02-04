@@ -18,7 +18,11 @@ struct ConverterView: View {
                             ForEach(FrameRate.allCases) { rate in
                                 Button(rate.id) { vm.convSourceRate = rate }
                             }
-                            Button("Custom...") { vm.showCustomFpsAlert = true }
+                            Button("Custom...") {
+                                // Set target to Source (false)
+                                vm.isEditingConverterDest = false
+                                vm.showCustomFpsAlert = true
+                            }
                         } label: {
                             PillLabel(
                                 text: vm.convSourceRate.id,
@@ -42,7 +46,7 @@ struct ConverterView: View {
                         .lineLimit(1).minimumScaleFactor(0.5)
                         .frame(height: isPad ? 90 : 60)
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                        // MOVED SHAKE HERE
+                        // Shake head if illegal operation
                         .shake(trigger: vm.errorShakeTrigger)
                         .animation(nil, value: vm.isFramesMode)
                         .contextMenu {
@@ -63,7 +67,11 @@ struct ConverterView: View {
                             ForEach(FrameRate.allCases) { rate in
                                 Button(rate.id) { vm.convDestRate = rate }
                             }
-                            Button("Custom...") { vm.showCustomFpsAlert = true }
+                            Button("Custom...") {
+                                // Set target to Dest (true)
+                                vm.isEditingConverterDest = true
+                                vm.showCustomFpsAlert = true
+                            }
                         } label: {
                             PillLabel(
                                 text: vm.convDestRate.id,
@@ -87,6 +95,7 @@ struct ConverterView: View {
                         .lineLimit(1).minimumScaleFactor(0.5)
                         .frame(height: isPad ? 90 : 60)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        // Shake head if illegal operation
                         .shake(trigger: vm.errorShakeTrigger)
                         .animation(nil, value: vm.isFramesMode)
                         .contextMenu {

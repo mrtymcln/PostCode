@@ -11,14 +11,15 @@ struct RunView: View {
         VStack(spacing: 0) {
             runHeaderView
 
-            // Wrap List in ScrollViewReader to enable programmatic scrolling
+            // 1. Wrap List in ScrollViewReader to enable programmatic scrolling
             ScrollViewReader { proxy in
                 List {
                     ForEach(vm.runList) { entry in
                         let index =
-                            vm.runList.firstIndex(where: { $0.id == entry.id }) ?? 0
+                            vm.runList.firstIndex(where: { $0.id == entry.id })
+                            ?? 0
                         runListRow(index: index, entry: entry)
-                            .id(entry.id) // Assign UUID for the scroller to find
+                            .id(entry.id)  // Assign UUID for the scroller to find
                     }
                     .onDelete(
                         perform: editMode == .active
@@ -35,7 +36,7 @@ struct RunView: View {
                 .environment(\.editMode, $editMode)
                 // Scroll to bottom when list grows
                 .onChange(of: vm.runList.count) { old, new in
-                    if new > old { // Only scroll if adding new segment
+                    if new > old {  // Only scroll if adding
                         withAnimation {
                             proxy.scrollTo(vm.runList.last?.id, anchor: .bottom)
                         }
@@ -43,7 +44,6 @@ struct RunView: View {
                 }
             }
         }
-        .shake(trigger: vm.errorShakeTrigger)
     }
 
 // MARK: - SUBVIEWS
@@ -80,6 +80,7 @@ struct RunView: View {
                         .foregroundColor(.gray)
                 }
             }
+            // Shake head if illegal operation
             .shake(trigger: vm.errorShakeTrigger)
         }
         .padding()

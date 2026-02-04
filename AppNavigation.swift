@@ -46,13 +46,13 @@ struct AppSidebar: View {
 
 struct AppHeader: View {
     @ObservedObject var vm: AppViewModel
-    // NEW: Binding to control the Done button state
+    // Binding to control the Done button state
     @Binding var runListEditMode: EditMode
     let isPad: Bool
 
     var body: some View {
         HStack(spacing: 8) {
-            // A. Mode button
+            // MODE BUTTON
             if !isPad {
                 Button(action: { withAnimation { vm.toggleAppMode() } }) {
                     PillLabel(
@@ -65,7 +65,7 @@ struct AppHeader: View {
                 .opacity(runListEditMode == .active ? 0.3 : 1.0)
             }
 
-            // B. Frame Rate button
+            // FRAME RATE BUTTON
             if vm.mode != .conv {
                 Menu {
                     ForEach(FrameRate.allCases) { rate in
@@ -95,7 +95,7 @@ struct AppHeader: View {
                 .opacity(runListEditMode == .active ? 0.3 : 1.0)
             }
 
-            // C. Timecode/Frames button
+            // TIMECODE/FRAMES BUTTON
             Button(action: { withAnimation { vm.toggleDisplayMode() } }) {
                 PillLabel(
                     text: vm.isFramesMode ? "Fr" : "TC",
@@ -107,11 +107,11 @@ struct AppHeader: View {
 
             Spacer()
 
-            // D. Share/Delete OR Done button
+            // SHARE/DELETE/DONE BUTTON
             actionButtons
         }
         .padding(.horizontal, isPad ? 0 : 16)
-        // Delete alert
+        // DELETE ALERT
         .alert(
             "Clear all? This cannot be undone.",
             isPresented: $vm.showClearAlert
@@ -131,12 +131,12 @@ struct AppHeader: View {
                     PillLabel(
                         text: "Done",
                         icon: "checkmark",
-                        color: NavTheme.buttonColor // UPDATED: Matches other pills (Grey)
+                        color: NavTheme.buttonColor
                     )
                 }
                 .transition(.scale.combined(with: .opacity))
             } else {
-                // STANDARD BUTTONS
+                // OTHERWISE SHARE/DELETE BUTTONS
                 Group {
                     if vm.mode == .run {
                         Menu {

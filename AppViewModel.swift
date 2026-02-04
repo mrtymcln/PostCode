@@ -26,8 +26,11 @@ class AppViewModel: ObservableObject {
     @Published var customFpsInput = ""
     @Published var isFramesMode = false
     
-    // NEW: Triggers the whimsical shake animation
+    // Triggers the head-shake if illegal operation
     @Published var errorShakeTrigger = 0
+    
+    // Tracks which Conv box requested the custom frame rate
+    var isEditingConverterDest = false
 
 // MARK: - CALC DATA
 
@@ -188,7 +191,7 @@ class AppViewModel: ObservableObject {
     }
 
     func changeFrameRate(to newRate: FrameRate) {
-        // Only update the frame rate for the current app mode.
+        // Only update the frame rate for the current app mode
         switch mode {
         case .calc:
             let old = calcFrameRate
@@ -201,8 +204,14 @@ class AppViewModel: ObservableObject {
             runFrameRate = newRate
             saveState()
         case .conv:
-            convSourceRate = newRate
+            // Check which Conv box triggered the change
+            if isEditingConverterDest {
+                convDestRate = newRate
+            } else {
+                convSourceRate = newRate
+            }
             saveState()
+            isEditingConverterDest = false // Reset
         }
     }
 
@@ -228,7 +237,7 @@ class AppViewModel: ObservableObject {
         }
     }
     
-    // Whimsical shake trigger helper
+    // Head Shake trigger helper
     func triggerErrorShake() {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.error)
@@ -238,7 +247,7 @@ class AppViewModel: ObservableObject {
     func toggleDisplayMode() {
         Task {
             withAnimation {
-                // Convert active input.
+                // Convert active input
                 if mode == .calc && !inputString.isEmpty {
                     if !isFramesMode {
                         let frames = TimecodeCalculator.inputToFrames(
@@ -279,7 +288,7 @@ class AppViewModel: ObservableObject {
                     }
                 }
 
-                // Update ticker tape.
+                // Update ticker tape
                 if mode == .calc {
                     var newTape: [String] = []
                     for line in tickerTape {
@@ -401,7 +410,7 @@ class AppViewModel: ObservableObject {
         }
     }
 
-    // Smart Trash logic
+    // Smart delete logic
     func handleTrashTap() {
         if mode == .calc {
             // If already empty, shake head
@@ -420,7 +429,7 @@ class AppViewModel: ObservableObject {
             if convInputString.isEmpty {
                 triggerErrorShake()
             } else {
-                // For conv mode, instant clear is usually fine, but sticking to alert for consistency
+                // Kept the alert in Conv mode... maybe remove?
                 showClearAlert = true
             }
         }
@@ -452,8 +461,8 @@ class AppViewModel: ObservableObject {
     func pasteFromClipboard() {
         guard let string = UIPasteboard.general.string else { return }
 
-        // 1. Strip everything that isn't a number.
-        // This converts "01:00:00:00" to "01000000" which fits the input logic.
+        // 1. Strip everything that isn't a number
+        // This converts "01:00:00:00" to "01000000" which fits the input logic
         let cleaned = string.filter { "0123456789".contains($0) }
 
         guard !cleaned.isEmpty else { return }
@@ -470,7 +479,7 @@ class AppViewModel: ObservableObject {
                         lastWasEquals = false
                     }
 
-                    // Prevent overflow
+                    // Prevents overflow of numbers
                     let limit =
                         isFramesMode ? 12 : (6 + calcFrameRate.frameDigits)
                     let available = limit - inputString.count
@@ -481,7 +490,7 @@ class AppViewModel: ObservableObject {
                     }
 
                 } else if mode == .run {
-                    // Run app mode logic if needed in future (skipped for now as per request)
+                    // Run mode logic if needed in future... skipped for now
                 } else if mode == .conv {
                     let limit =
                         isFramesMode ? 12 : (6 + convSourceRate.frameDigits)
@@ -497,7 +506,7 @@ class AppViewModel: ObservableObject {
         }
     }
 
-    // Helper to get Frame Count for the "Copy as Frames" button.
+    // Helper to get Frame Count for the "Copy as Frames" button
     func getCurrentDisplayFrames() -> Int {
         if isFramesMode {
             return Int(inputString) ?? 0
@@ -512,11 +521,11 @@ class AppViewModel: ObservableObject {
 // MARK: - HISTORY MANAGEMENT
 
     func deleteTapeItem(at index: Int) {
-        // 1. Remove the visual line.
+        // 1. Remove the visual line
         guard tickerTape.indices.contains(index) else { return }
         tickerTape.remove(at: index)
 
-        // 2. Re-calculate the maths from scratch.
+        // 2. Re-calculate the maths from scratch
         recalculateFromTape()
     }
 
@@ -525,14 +534,14 @@ class AppViewModel: ObservableObject {
 
         // 1. REBUILD THE SUM
         for line in tickerTape {
-            // A. Clean the line.
+            // A. Clean the line
             let cleanLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            // B. Ignore "Result" lines (lines starting with =) and Separators lines.
+            // B. Ignore "Result" lines (lines starting with =) and Separators lines
             if cleanLine.starts(with: "=") { continue }
             if cleanLine.contains("-----") { continue }
 
-            // C. Determine the operation.
+            // C. Determine the operation
             var currentOp: CalcOperation = .add
             var textToParse = cleanLine
 
@@ -551,7 +560,7 @@ class AppViewModel: ObservableObject {
                 textToParse = String(cleanLine.dropFirst())
             }
 
-            // D. Convert Text to Frames.
+            // D. Convert Text to Frames
             let valueString = textToParse.replacingOccurrences(
                 of: " ",
                 with: ""
@@ -561,7 +570,7 @@ class AppViewModel: ObservableObject {
                 fps: activeFrameRate
             )
 
-            // E. Apply maths.
+            // E. Apply maths
             switch currentOp {
             case .add: newTotal += valueFrames
             case .subtract: newTotal -= valueFrames
@@ -579,7 +588,7 @@ class AppViewModel: ObservableObject {
         self.inputString = ""
 
         // 3. UPDATE VISUALS
-        // If the last line on screen is a Result (=), update it to match the new total.
+        // If the last line on screen is a Result (=), update it to match the new total
         if let last = tickerTape.last, last.starts(with: "=") {
             let resultStr =
                 isFramesMode
@@ -589,18 +598,18 @@ class AppViewModel: ObservableObject {
                     fps: activeFrameRate
                 )
 
-            // Overwrite the last line with the correct new total.
+            // Overwrite the last line with the correct new total
             tickerTape[tickerTape.count - 1] = "= " + resultStr
 
-            // Ensure the app knows we are sitting on a result.
+            // Ensure the app knows we are sitting on a result
             lastWasEquals = true
         } else {
-            // If the last line is NOT a result (e.g. we deleted the result),
-            // then we are in the middle of an operation.
+            // If the last line is not a result (e.g. user deleted the result),
+            // then we are in the middle of an operation
             lastWasEquals = false
         }
 
-        // 4. Handle the empty state.
+        // 4. Handle the empty state
         if tickerTape.isEmpty {
             self.accumulatedFrames = 0
             lastWasEquals = false
@@ -629,12 +638,12 @@ class AppViewModel: ObservableObject {
         let isNegative = cleanRaw.hasPrefix("-")
         if isNegative { cleanRaw.removeFirst() }
 
-        // Dynamic frame rate selection.
+        // Dynamic frame rate selection
         let useFps: FrameRate
         if let specificFps = fps {
             useFps = specificFps
         } else {
-            // Context-aware default.
+            // Context-aware default
             switch mode {
             case .calc: useFps = calcFrameRate
             case .run: useFps = runFrameRate
@@ -848,26 +857,39 @@ class AppViewModel: ObservableObject {
         tickerTape = newTape
     }
 
-// MARK: - CSV EXPORT
+    // MARK: - CSV EXPORT
 
     func generateCSV() -> URL {
-        // 1. Create the heading row.
-        var csvString = "Segment,In,Out,Duration\n"
+        // 1. Create heading row
+        var csvString = "Segment,In,Out,Duration,Total Run Time\n"
 
-        // 2. Loop through the Run List and append rows.
+        // Variable to track the TRT
+        var cumulativeFrames = 0
+
+        // 2. Loop through the Run List and append rows
         for (index, item) in runList.enumerated() {
-            // Format: "1,00:00:00:00,00:00:05:00,00:00:05:00"
+
+            // Add current segment's duration to the TRT
+            cumulativeFrames += item.durationFrames
+
+            // Convert the TRT to a timecode string
+            let totalString = TimecodeCalculator.framesToString(
+                totalFrames: cumulativeFrames,
+                fps: runFrameRate
+            )
+
+            // Format "1,IN,OUT,DUR,TOTAL"
             let row =
-                "\(index + 1),\(item.inPoint),\(item.outPoint),\(item.durationString)\n"
+                "\(index + 1),\(item.inPoint),\(item.outPoint),\(item.durationString),\(totalString)\n"
             csvString.append(row)
         }
 
-        // 3. Define the file path in the Temp folder.
+        // 3. Define the file path in the Temp folder
         let fileName = "PostCode_RunList_Output.csv"
         let path = FileManager.default.temporaryDirectory
             .appendingPathComponent(fileName)
 
-        // 4. Write the file.
+        // 4. Write the file
         do {
             try csvString.write(to: path, atomically: true, encoding: .utf8)
         } catch {
@@ -901,7 +923,7 @@ class AppViewModel: ObservableObject {
     }
 
     func saveImmediate() {
-        // AppStateSnapshot must match the struct in TimecodeLogic.
+        // AppStateSnapshot must match the struct in TimecodeLogic
         let snapshot = AppStateSnapshot(
             mode: mode,
             isFramesMode: isFramesMode,
