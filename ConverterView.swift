@@ -42,6 +42,8 @@ struct ConverterView: View {
                         .lineLimit(1).minimumScaleFactor(0.5)
                         .frame(height: isPad ? 90 : 60)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        // MOVED SHAKE HERE
+                        .shake(trigger: vm.errorShakeTrigger)
                         .animation(nil, value: vm.isFramesMode)
                         .contextMenu {
                             Button {
@@ -85,6 +87,7 @@ struct ConverterView: View {
                         .lineLimit(1).minimumScaleFactor(0.5)
                         .frame(height: isPad ? 90 : 60)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        .shake(trigger: vm.errorShakeTrigger)
                         .animation(nil, value: vm.isFramesMode)
                         .contextMenu {
                             Button {

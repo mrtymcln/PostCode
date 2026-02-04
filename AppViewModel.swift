@@ -25,6 +25,9 @@ class AppViewModel: ObservableObject {
     @Published var showEasterEgg = false
     @Published var customFpsInput = ""
     @Published var isFramesMode = false
+    
+    // NEW: Triggers the whimsical shake animation
+    @Published var errorShakeTrigger = 0
 
 // MARK: - CALC DATA
 
@@ -224,6 +227,13 @@ class AppViewModel: ObservableObject {
             withAnimation { self.showEasterEgg = false }
         }
     }
+    
+    // Whimsical shake trigger helper
+    func triggerErrorShake() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.error)
+        withAnimation { errorShakeTrigger += 1 }
+    }
 
     func toggleDisplayMode() {
         Task {
@@ -359,6 +369,22 @@ class AppViewModel: ObservableObject {
     }
 
     func backspace() {
+        // If nothing to delete, shake head (Calc)
+        if mode == .calc && inputString.isEmpty {
+            triggerErrorShake()
+            return
+        }
+        // If nothing to delete, shake head (Run)
+        if mode == .run {
+            if activeRunField == .inPoint && runInString.isEmpty { triggerErrorShake(); return }
+            if activeRunField == .outPoint && runOutString.isEmpty { triggerErrorShake(); return }
+        }
+        // If nothing to delete, shake head (Conv)
+        if mode == .conv && convInputString.isEmpty {
+            triggerErrorShake()
+            return
+        }
+        
         Task {
             if mode == .calc {
                 if !inputString.isEmpty { inputString.removeLast() }
@@ -372,6 +398,31 @@ class AppViewModel: ObservableObject {
                 if !convInputString.isEmpty { convInputString.removeLast() }
             }
             saveState()
+        }
+    }
+
+    // Smart Trash logic
+    func handleTrashTap() {
+        if mode == .calc {
+            // If already empty, shake head
+            if tickerTape.isEmpty && inputString.isEmpty && accumulatedFrames == 0 && pendingOperation == .none {
+                triggerErrorShake()
+            } else {
+                showClearAlert = true
+            }
+        } else if mode == .run {
+            if runList.isEmpty && runInString.isEmpty && runOutString.isEmpty {
+                triggerErrorShake()
+            } else {
+                showClearAlert = true
+            }
+        } else if mode == .conv {
+            if convInputString.isEmpty {
+                triggerErrorShake()
+            } else {
+                // For conv mode, instant clear is usually fine, but sticking to alert for consistency
+                showClearAlert = true
+            }
         }
     }
 
@@ -655,6 +706,12 @@ class AppViewModel: ObservableObject {
                     input: inputString,
                     fps: calcFrameRate
                 )
+            
+            // CHECK FOR DIVIDE BY ZERO
+            if pendingOperation == .divide && currentFrames == 0 {
+                triggerErrorShake()
+                return
+            }
 
             if !inputString.isEmpty {
                 tickerTape.append("  " + getFormattedActiveDisplay())

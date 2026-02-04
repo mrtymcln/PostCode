@@ -17,10 +17,7 @@ struct AppSidebar: View {
             Spacer()
             sidebarButton(mode: .calc, icon: "plus.circle", label: "Calc")
             sidebarButton(mode: .run, icon: "figure.run", label: "Run")
-            sidebarButton(
-                mode: .conv,
-                icon: "arrow.up.arrow.down",
-                label: "Conv"
+            sidebarButton(mode: .conv, icon: "arrow.up.arrow.down", label: "Conv"
             )
             Spacer()
         }
@@ -107,6 +104,8 @@ struct AppHeader: View {
             // D. Share/Delete buttons
             actionButtons
         }
+        // FIX: Add horizontal padding for iPhone (iPad handles its own in ContentView)
+        .padding(.horizontal, isPad ? 0 : 16)
         // Delete alert
         .alert(
             "Clear all? This cannot be undone.",
@@ -138,7 +137,8 @@ struct AppHeader: View {
             Button(action: {
                 let generator = UIImpactFeedbackGenerator(style: .medium)
                 generator.impactOccurred()
-                vm.showClearAlert = true
+                // Use smart handler instead of direct toggle
+                vm.handleTrashTap()
             }) {
                 Image(systemName: "trash").font(
                     .system(size: 20, weight: .semibold)

@@ -1,3 +1,4 @@
+// ContentView.swift
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -285,4 +286,11 @@ extension ContentView {
         }
         return .ignored
     }
+}
+
+// MARK: - PREVIEW
+
+#Preview {
+    ContentView(vm: AppViewModel())
+        .preferredColorScheme(.dark)
 }

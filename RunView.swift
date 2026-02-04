@@ -68,6 +68,7 @@ struct RunView: View {
                         .foregroundColor(.gray)
                 }
             }
+            .shake(trigger: vm.errorShakeTrigger)
         }
         .padding()
         .background(colourDarkGrey)

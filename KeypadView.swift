@@ -51,7 +51,8 @@ struct KeypadView: View {
                 ) {
                     let generator = UIImpactFeedbackGenerator(style: .medium)
                     generator.impactOccurred()
-                    vm.showClearAlert = true
+                    // CHANGED: Smart handler for AC button
+                    vm.handleTrashTap()
                 }
                 CalcButton(
                     label: "Negate",

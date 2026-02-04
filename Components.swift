@@ -1,6 +1,16 @@
 import AudioToolbox
 import SwiftUI
 
+// MARK: - KEYPAD BUTTONS
+
+struct BouncyButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.interactiveSpring(response: 0.2, dampingFraction: 0.6), value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.8 : 1.0)
+    }
+}
 // MARK: - COMPONENTS
 
 struct CalcButton: View {
@@ -64,7 +74,7 @@ struct CalcButton: View {
             )
             .clipShape(Circle())
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(BouncyButtonStyle())
         .sensoryFeedback(
             .impact(weight: .light, intensity: 1.0),
             trigger: feedbackTrigger
@@ -204,5 +214,37 @@ struct CSVShareButton: View {
 
             rootVC.present(activityVC, animated: true)
         }
+    }
+}
+
+// MARK: - ANIMATION MODIFIERS
+
+struct ShakeEffect: ViewModifier {
+    var trigger: Int
+    
+    func body(content: Content) -> some View {
+        content
+            .keyframeAnimator(
+                initialValue: 0.0,
+                trigger: trigger
+            ) { content, value in
+                content.offset(x: value)
+            } keyframes: { _ in
+                // Tiger-style 'wrong password' shake for illegal operations
+                MoveKeyframe(0.0)
+                CubicKeyframe(-16.0, duration: 0.07) // swing left
+                CubicKeyframe(16.0, duration: 0.07)  // swing right
+                CubicKeyframe(-12.0, duration: 0.07) // swing left
+                CubicKeyframe(12.0, duration: 0.07)  // swing right
+                CubicKeyframe(-6.0, duration: 0.07)  // smaller Left
+                CubicKeyframe(6.0, duration: 0.07)   // smaller Right
+                CubicKeyframe(0.0, duration: 0.07)   // centreA
+            }
+    }
+}
+
+extension View {
+    func shake(trigger: Int) -> some View {
+        modifier(ShakeEffect(trigger: trigger))
     }
 }

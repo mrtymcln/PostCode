@@ -43,6 +43,7 @@ struct CalculatorView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(20)
+                .shake(trigger: vm.errorShakeTrigger)
                 .onChange(of: vm.tickerTape) { _, _ in
                     withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
                 }
@@ -67,14 +68,14 @@ struct CalculatorView: View {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Spacer()
                 
-                // Operator
+                // OPERATOR
                 Text(op)
                     .font(.system(size: tapeFontSize, weight: isResult ? .bold : .regular, design: .monospaced))
                     .foregroundColor(isResult ? .green : .white)
                     .frame(width: 20, alignment: .trailing)
                     .padding(.trailing, 8)
 
-                // Value
+                // VALUE
                 Text(value)
                     .font(.system(size: tapeFontSize, weight: isResult ? .bold : .regular, design: .monospaced))
                     .foregroundColor(isResult ? .green : .white)

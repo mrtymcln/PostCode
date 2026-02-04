@@ -1,3 +1,4 @@
+// WelcomeView.swift
 import SwiftUI
 
 struct WelcomeView: View {
