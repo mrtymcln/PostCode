@@ -27,7 +27,7 @@ struct WelcomeView: View {
                                     .foregroundColor(.white)
                                     .multilineTextAlignment(.center)
                                 Text(
-                                    "Created by Marty McLean\nNew in version 1.1"
+                                    "Created by Marty McLean\nNew in version 1.2"
                                 )
                                 .font(.subheadline)
                                 .fontWeight(.medium)

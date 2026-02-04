@@ -2,7 +2,7 @@ import AudioToolbox
 import SwiftUI
 
 // MARK: - COMPONENTS
-    
+
 struct CalcButton: View {
     let label: String
     var systemImage: String? = nil
@@ -13,10 +13,10 @@ struct CalcButton: View {
     var isActive: Bool = false
     let action: () -> Void
 
-    // Haptic state.
+    // Haptic state
     @State private var feedbackTrigger = false
 
-    // Determine sound as per button type.
+    // Determine sound as per button type
     private var soundID: SystemSoundID {
         if label == "Backspace" || systemImage == "delete.left" {
             return 1155
@@ -31,13 +31,13 @@ struct CalcButton: View {
 
     var body: some View {
         Button(action: {
-            // Play sound as per button type.
+            // Play sound as per button type
             AudioServicesPlaySystemSound(soundID)
 
-            // Trigger button haptics.
+            // Trigger button haptics
             feedbackTrigger.toggle()
 
-            // Perform button action.
+            // Perform button action
             action()
 
         }) {
@@ -111,7 +111,7 @@ struct ShareLink<Label: View>: View {
             let rootVC = windowScene.windows.first?.rootViewController
         {
 
-            // Fix for iPad popover.
+            // Fix for iPad popover
             if let popover = av.popoverPresentationController {
                 popover.sourceView = rootVC.view
                 popover.sourceRect = CGRect(
@@ -131,7 +131,7 @@ struct RunInputField: View {
     let label: String
     let value: String
     let isActive: Bool
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.caption).bold().foregroundColor(.white)
@@ -150,5 +150,59 @@ struct RunInputField: View {
                     lineWidth: isActive ? 2 : 1
                 )
         )
+    }
+}
+// MARK: - ISOLATED SHARE BUTTONS
+
+// TXT button in SwiftUI
+struct TextShareButton: View {
+    let text: String
+
+    var body: some View {
+        ShareLink(item: text) {
+            Label("Save as TXT", systemImage: "text.document")
+        }
+    }
+}
+
+// CSV button in UIKit to guarantee File handling
+struct CSVShareButton: View {
+    let url: URL
+
+    var body: some View {
+        Button(action: {
+            shareFile(url)
+        }) {
+            Label("Save as CSV", systemImage: "tablecells")
+        }
+    }
+
+    // Manually trigger the native Share Sheet
+    func shareFile(_ url: URL) {
+        let activityVC = UIActivityViewController(
+            activityItems: [url],
+            applicationActivities: nil
+        )
+
+        // Find the active window to present from
+        if let windowScene = UIApplication.shared.connectedScenes.first
+            as? UIWindowScene,
+            let rootVC = windowScene.windows.first?.rootViewController
+        {
+
+            // Anchor for iPad and Mac popovers
+            if let popover = activityVC.popoverPresentationController {
+                popover.sourceView = rootVC.view
+                popover.sourceRect = CGRect(
+                    x: rootVC.view.bounds.midX,
+                    y: rootVC.view.bounds.midY,
+                    width: 0,
+                    height: 0
+                )
+                popover.permittedArrowDirections = []
+            }
+
+            rootVC.present(activityVC, animated: true)
+        }
     }
 }
