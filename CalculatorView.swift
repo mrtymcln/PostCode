@@ -112,3 +112,10 @@ struct CalculatorView: View {
         return ("", trimmed, false)
     }
 }
+
+// MARK: - PREVIEW
+
+#Preview {
+    CalculatorView(vm: AppViewModel())
+        .preferredColorScheme(.dark)
+}

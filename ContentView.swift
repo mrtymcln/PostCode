@@ -93,12 +93,18 @@ extension ContentView {
                         ZStack {
                             Color.black.ignoresSafeArea()
                             VStack {
-                                if vm.mode == .calc {
-                                    CalculatorView(vm: vm)
-                                } else if vm.mode == .run {
-                                    RunView(vm: vm, editMode: $runListEditMode)
-                                } else {
-                                    ConverterView(vm: vm)
+                                // ANIMATION BLOCK
+                                Group {
+                                    if vm.mode == .calc {
+                                        CalculatorView(vm: vm)
+                                            .transition(.slideAndFade)
+                                    } else if vm.mode == .run {
+                                        RunView(vm: vm, editMode: $runListEditMode)
+                                            .transition(.slideAndFade)
+                                    } else {
+                                        ConverterView(vm: vm)
+                                            .transition(.slideAndFade)
+                                    }
                                 }
                             }
                             .frame(maxWidth: min(700, contentWidth * 0.6))
@@ -107,6 +113,8 @@ extension ContentView {
                         .frame(width: contentWidth * 0.60, height: height)
                         .contentShape(Rectangle())
                         .onTapGesture { isViewFocused = true }
+                        // Apply animation to this container
+                        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: vm.mode)
 
                         Rectangle().fill(Color(UIColor.systemGray6)).frame(
                             width: 1
@@ -143,12 +151,18 @@ extension ContentView {
                         ZStack {
                             Color.black.ignoresSafeArea()
                             VStack {
-                                if vm.mode == .calc {
-                                    CalculatorView(vm: vm)
-                                } else if vm.mode == .run {
-                                    RunView(vm: vm, editMode: $runListEditMode)
-                                } else {
-                                    ConverterView(vm: vm)
+                                // ANIMATION BLOCK
+                                Group {
+                                    if vm.mode == .calc {
+                                        CalculatorView(vm: vm)
+                                            .transition(.slideAndFade)
+                                    } else if vm.mode == .run {
+                                        RunView(vm: vm, editMode: $runListEditMode)
+                                            .transition(.slideAndFade)
+                                    } else {
+                                        ConverterView(vm: vm)
+                                            .transition(.slideAndFade)
+                                    }
                                 }
                             }
                             .padding(20).frame(maxWidth: 600)
@@ -156,6 +170,8 @@ extension ContentView {
                         .frame(width: contentWidth, height: height * 0.40)
                         .contentShape(Rectangle())
                         .onTapGesture { isViewFocused = true }
+                        // Apply animation to this container
+                        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: vm.mode)
 
                         Rectangle().fill(Color(UIColor.systemGray6)).frame(
                             height: 1
@@ -192,22 +208,27 @@ extension ContentView {
                 .background(Color.black).zIndex(20)
 
             ZStack {
+                // ANIMATION BLOCK
                 if vm.mode == .calc {
                     CalculatorView(vm: vm)
+                        .transition(.slideAndFade)
                 } else if vm.mode == .run {
                     RunView(vm: vm, editMode: $runListEditMode)
+                        .transition(.slideAndFade)
                 } else {
                     ConverterView(vm: vm)
+                        .transition(.slideAndFade)
                 }
             }
+            // Apple-style Card Slide Animation applied here
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: vm.mode)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
             .onTapGesture { isViewFocused = true }
             .padding(.horizontal, 16).padding(.bottom, 10)
             .zIndex(0)
 
-            // UPDATED: Combined Container for Keypad + Input Area
-            // This ensures they slide together as one solid unit.
+            // Combined Container for Keypad + Input Area
             if runListEditMode == .inactive {
                 VStack(spacing: 0) {
                     if vm.mode == .run {
@@ -217,13 +238,12 @@ extension ContentView {
                     KeypadView(vm: vm, width: width)
                         .padding(.bottom, 20)
                 }
-                .background(Color.black) // Opaque bg prevents see-through during slide
+                .background(Color.black)
                 .transition(.move(edge: .bottom))
                 .zIndex(1)
             }
         }
         .frame(width: width)
-        // UPDATED: Use easeInOut for smoother slide (removes the springy jitter on edges)
         .animation(.easeInOut(duration: 0.35), value: runListEditMode)
     }
 
@@ -291,6 +311,17 @@ extension ContentView {
             return .handled
         }
         return .ignored
+    }
+}
+
+// MARK: - CUSTOM TRANSITION EXTENSION
+extension AnyTransition {
+    static var slideAndFade: AnyTransition {
+        // Enters from right, Exits by shrinking and fading
+        .asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .scale(scale: 0.95).combined(with: .opacity)
+        )
     }
 }
 

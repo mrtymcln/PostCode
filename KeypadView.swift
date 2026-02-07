@@ -175,6 +175,7 @@ struct KeypadView: View {
                 customSize: size
             ) { vm.addDigit("3") }
 
+            // SHARED BUTTON: CALC (Plus) / RUN (Add Segment)
             if vm.mode == .calc {
                 CalcButton(
                     label: "Plus",
@@ -185,6 +186,18 @@ struct KeypadView: View {
                     isActive: vm.pendingOperation == .add
                 ) {
                     vm.setOperation(.add)
+                }
+            } else if vm.mode == .run {
+                CalcButton(
+                    label: "Add",
+                    systemImage: "plus",
+                    color: KeypadTheme.orange,
+                    textColor: .white,
+                    customSize: size
+                ) {
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
+                    vm.addSegment()
                 }
             } else {
                 Spacer().frame(width: size)
@@ -240,7 +253,7 @@ struct RunInputArea: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // INPUT FIELDS (No conditional hide/show, handled by parent)
+            // INPUT FIELDS ONLY (Plus button moved to Keypad)
             RunInputField(
                 label: "IN:",
                 value: vm.formatInput(vm.runInString),
@@ -261,20 +274,6 @@ struct RunInputArea: View {
                 DispatchQueue.main.async {
                     vm.activeRunField = .outPoint
                 }
-            }
-
-            // ADD BUTTON (Checkmark is now in Header)
-            Button(action: {
-                let generator = UIImpactFeedbackGenerator(style: .medium)
-                generator.impactOccurred()
-                vm.addSegment()
-            }) {
-                Image(systemName: "plus")
-                    .font(.title2).bold()
-                    .foregroundColor(.white)
-                    .frame(width: 50, height: 50)
-                    .background(KeypadTheme.orange)
-                    .clipShape(Circle())
             }
         }
         .padding(.vertical, 8)

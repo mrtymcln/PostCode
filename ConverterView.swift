@@ -118,3 +118,10 @@ struct ConverterView: View {
         }
     }
 }
+
+// MARK: - PREVIEW
+
+#Preview {
+    ConverterView(vm: AppViewModel())
+        .preferredColorScheme(.dark)
+}

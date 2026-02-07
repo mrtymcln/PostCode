@@ -138,3 +138,9 @@ struct RunView: View {
         }
     }
 }
+// MARK: - PREVIEW
+
+#Preview {
+    ContentView(vm: AppViewModel())
+        .preferredColorScheme(.dark)
+}

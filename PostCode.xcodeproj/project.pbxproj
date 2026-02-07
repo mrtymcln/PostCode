@@ -18,6 +18,7 @@
 		B008129E2F32EFAA00093766 /* ConverterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B008129D2F32EFA800093766 /* ConverterView.swift */; };
 		B00812A02F32F0C900093766 /* KeypadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B008129F2F32F0C700093766 /* KeypadView.swift */; };
 		B00812A22F32F25C00093766 /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00812A12F32F25A00093766 /* AppNavigation.swift */; };
+		B0B5D7122F362D2C000BFD5B /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = B0B5D7112F362D2C000BFD5B /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +56,7 @@
 		B00812A12F32F25A00093766 /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigation.swift; sourceTree = "<group>"; };
 		B08F44742F11DFDA00B52D8A /* PostCode.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PostCode.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B09FB6802F20ABA600E03A87 /* PostCodeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PostCodeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B0B5D7112F362D2C000BFD5B /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -100,6 +102,7 @@
 		B08F446B2F11DFDA00B52D8A = {
 			isa = PBXGroup;
 			children = (
+				B0B5D7112F362D2C000BFD5B /* README.md */,
 				B00812A12F32F25A00093766 /* AppNavigation.swift */,
 				B00812872F32EB5D00093766 /* Components.swift */,
 				B008129F2F32F0C700093766 /* KeypadView.swift */,
@@ -212,6 +215,7 @@
 		B08F44722F11DFDA00B52D8A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				B0B5D7122F362D2C000BFD5B /* README.md in Resources */,
 			);
 		};
 		B09FB67E2F20ABA600E03A87 /* Resources */ = {
