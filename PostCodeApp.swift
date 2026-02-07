@@ -1,4 +1,3 @@
-// PostCodeApp.swift
 import SwiftUI
 
 @main
@@ -10,6 +9,10 @@ struct PostCodeApp: App {
         WindowGroup {
             ContentView(vm: vm)
                 .preferredColorScheme(.dark)
+                // TRIGGER DATA LOAD HERE, AFTER VIEW IS READY
+                .onAppear {
+                    vm.loadData()
+                }
                 .onChange(of: scenePhase) { oldPhase, newPhase in
                     if newPhase == .background || newPhase == .inactive {
                         vm.saveImmediate()

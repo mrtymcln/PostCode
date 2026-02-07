@@ -21,7 +21,10 @@ struct ContentView: View {
                 }
             }
             .onAppear {
-                DispatchQueue.main.async { isViewFocused = true }
+                // Slight delay to ensure view hierarchy is ready for focus
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isViewFocused = true
+                }
             }
             .focusable(true)
             .focused($isViewFocused)

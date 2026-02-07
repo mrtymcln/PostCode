@@ -66,9 +66,14 @@ class AppViewModel: ObservableObject {
         self.runFrameRate = .fps25
         self.convSourceRate = .fps25
         self.convDestRate = .fps25
-
+        
+        // REMOVED: loadState() and checkForUpdate() from here to prevent
+        // "Publishing changes from within view updates" warning.
+    }
+    
+    // NEW: Call this from the View's .onAppear
+    func loadData() {
         loadState()
-
         checkForUpdate()
     }
 
