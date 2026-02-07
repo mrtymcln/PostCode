@@ -36,7 +36,7 @@ class AppViewModel: ObservableObject {
 
     @Published var calcFrameRate: FrameRate = .fps25
     @Published var inputString = ""
-    @Published var tickerTape: [String] = []
+    @Published var paperTape: [String] = []
     @Published var accumulatedFrames = 0
     @Published var pendingOperation: CalcOperation = .none
     var lastWasEquals = false
@@ -152,7 +152,7 @@ class AppViewModel: ObservableObject {
 
     var exportText: String {
         switch mode {
-        case .calc: return tickerTape.joined(separator: "\n")
+        case .calc: return paperTape.joined(separator: "\n")
         case .run:
             var text =
                 "Total Running Time (@ \(runFrameRate.id))\n---------------------------\n"
@@ -288,10 +288,10 @@ class AppViewModel: ObservableObject {
                     }
                 }
 
-                // Update ticker tape
+                // Update the paper tape
                 if mode == .calc {
                     var newTape: [String] = []
-                    for line in tickerTape {
+                    for line in paperTape {
                         if line.count <= 1 && !line.first!.isNumber {
                             newTape.append(line)
                             continue
@@ -341,7 +341,7 @@ class AppViewModel: ObservableObject {
                             }
                         }
                     }
-                    tickerTape = newTape
+                    paperTape = newTape
                 }
                 isFramesMode.toggle()
                 saveState()
@@ -357,7 +357,7 @@ class AppViewModel: ObservableObject {
                 if lastWasEquals {
                     inputString = ""
                     accumulatedFrames = 0
-                    tickerTape.append("----------------")
+                    paperTape.append("----------------")
                     lastWasEquals = false
                 }
                 let limit = isFramesMode ? 12 : (6 + calcFrameRate.frameDigits)
@@ -414,7 +414,7 @@ class AppViewModel: ObservableObject {
     func handleTrashTap() {
         if mode == .calc {
             // If already empty, shake head
-            if tickerTape.isEmpty && inputString.isEmpty && accumulatedFrames == 0 && pendingOperation == .none {
+            if paperTape.isEmpty && inputString.isEmpty && accumulatedFrames == 0 && pendingOperation == .none {
                 triggerErrorShake()
             } else {
                 showClearAlert = true
@@ -440,7 +440,7 @@ class AppViewModel: ObservableObject {
             withAnimation {
                 if mode == .calc {
                     inputString = ""
-                    tickerTape = []
+                    paperTape = []
                     accumulatedFrames = 0
                     pendingOperation = .none
                     lastWasEquals = false
@@ -475,7 +475,7 @@ class AppViewModel: ObservableObject {
                     if lastWasEquals {
                         inputString = ""
                         accumulatedFrames = 0
-                        tickerTape.append("----------------")
+                        paperTape.append("----------------")
                         lastWasEquals = false
                     }
 
@@ -522,8 +522,8 @@ class AppViewModel: ObservableObject {
 
     func deleteTapeItem(at index: Int) {
         // 1. Remove the visual line
-        guard tickerTape.indices.contains(index) else { return }
-        tickerTape.remove(at: index)
+        guard paperTape.indices.contains(index) else { return }
+        paperTape.remove(at: index)
 
         // 2. Re-calculate the maths from scratch
         recalculateFromTape()
@@ -533,7 +533,7 @@ class AppViewModel: ObservableObject {
         var newTotal = 0
 
         // 1. REBUILD THE SUM
-        for line in tickerTape {
+        for line in paperTape {
             // A. Clean the line
             let cleanLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -589,7 +589,7 @@ class AppViewModel: ObservableObject {
 
         // 3. UPDATE VISUALS
         // If the last line on screen is a Result (=), update it to match the new total
-        if let last = tickerTape.last, last.starts(with: "=") {
+        if let last = paperTape.last, last.starts(with: "=") {
             let resultStr =
                 isFramesMode
                 ? "\(newTotal)"
@@ -599,7 +599,7 @@ class AppViewModel: ObservableObject {
                 )
 
             // Overwrite the last line with the correct new total
-            tickerTape[tickerTape.count - 1] = "= " + resultStr
+            paperTape[paperTape.count - 1] = "= " + resultStr
 
             // Ensure the app knows we are sitting on a result
             lastWasEquals = true
@@ -610,7 +610,7 @@ class AppViewModel: ObservableObject {
         }
 
         // 4. Handle the empty state
-        if tickerTape.isEmpty {
+        if paperTape.isEmpty {
             self.accumulatedFrames = 0
             lastWasEquals = false
         }
@@ -683,9 +683,9 @@ class AppViewModel: ObservableObject {
 
             if accumulatedFrames == 0 && pendingOperation == .none {
                 accumulatedFrames = currentFrames
-                tickerTape.append("  " + safeDisplay)
+                paperTape.append("  " + safeDisplay)
             } else if !inputString.isEmpty {
-                tickerTape.append("  " + safeDisplay)
+                paperTape.append("  " + safeDisplay)
                 performMath(newInput: currentFrames)
             }
             pendingOperation = op
@@ -697,7 +697,7 @@ class AppViewModel: ObservableObject {
                 case .divide: "÷"
                 default: "?"
                 }
-            tickerTape.append(symbol)
+            paperTape.append(symbol)
             inputString = ""
             saveState()
         }
@@ -723,7 +723,7 @@ class AppViewModel: ObservableObject {
             }
 
             if !inputString.isEmpty {
-                tickerTape.append("  " + getFormattedActiveDisplay())
+                paperTape.append("  " + getFormattedActiveDisplay())
             }
             performMath(newInput: currentFrames)
             let resultStr =
@@ -733,7 +733,7 @@ class AppViewModel: ObservableObject {
                     totalFrames: accumulatedFrames,
                     fps: calcFrameRate
                 )
-            tickerTape.append("= " + resultStr)
+            paperTape.append("= " + resultStr)
             inputString = ""
             pendingOperation = .none
             lastWasEquals = true
@@ -782,7 +782,7 @@ class AppViewModel: ObservableObject {
             lastWasEquals = false
             accumulatedFrames = 0
             pendingOperation = .none
-            withAnimation { tickerTape.append("  (Ans)") }
+            withAnimation { paperTape.append("  (Ans)") }
             saveState()
         }
     }
@@ -835,7 +835,7 @@ class AppViewModel: ObservableObject {
     {
         guard oldRate != newRate, !isFramesMode else { return }
         var newTape: [String] = []
-        for line in tickerTape {
+        for line in paperTape {
             if line.contains(":") || line.contains(";") {
                 let clean = line.replacingOccurrences(of: "= ", with: "")
                     .replacingOccurrences(of: "  ", with: "")
@@ -854,7 +854,7 @@ class AppViewModel: ObservableObject {
                 newTape.append(line)
             }
         }
-        tickerTape = newTape
+        paperTape = newTape
     }
 
     // MARK: - CSV EXPORT
@@ -930,7 +930,7 @@ class AppViewModel: ObservableObject {
 
             calcFrameRate: calcFrameRate,
             inputString: inputString,
-            tickerTape: tickerTape,
+            paperTape: paperTape,
             accumulatedFrames: accumulatedFrames,
             pendingOperation: pendingOperation,
 
@@ -972,7 +972,7 @@ class AppViewModel: ObservableObject {
 
             self.calcFrameRate = snapshot.calcFrameRate
             self.inputString = snapshot.inputString
-            self.tickerTape = snapshot.tickerTape
+            self.paperTape = snapshot.paperTape
             self.accumulatedFrames = snapshot.accumulatedFrames
             self.pendingOperation = snapshot.pendingOperation
 

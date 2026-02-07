@@ -15,8 +15,8 @@ struct CalculatorView: View {
                     Spacer(minLength: 40)
 
                     // HISTORY LINES
-                    ForEach(Array(vm.tickerTape.enumerated()), id: \.offset) { index, line in
-                        tickerTapeRow(index: index, line: line)
+                    ForEach(Array(vm.paperTape.enumerated()), id: \.offset) { index, line in
+                        paperTapeRow(index: index, line: line)
                     }
 
                     // ACTIVE INPUT LINE
@@ -44,7 +44,7 @@ struct CalculatorView: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(20)
                 .shake(trigger: vm.errorShakeTrigger)
-                .onChange(of: vm.tickerTape) { _, _ in
+                .onChange(of: vm.paperTape) { _, _ in
                     withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
                 }
             }
@@ -56,7 +56,7 @@ struct CalculatorView: View {
 // MARK: - ROWS & PARSING
 
     @ViewBuilder
-    private func tickerTapeRow(index: Int, line: String) -> some View {
+    private func paperTapeRow(index: Int, line: String) -> some View {
         if line.contains("----") {
             Rectangle()
                 .fill(Color.primary.opacity(0.2))

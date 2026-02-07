@@ -10,7 +10,7 @@ struct AppStateSnapshot: Codable, Sendable {
     // Calc State
     var calcFrameRate: FrameRate
     var inputString: String
-    var tickerTape: [String]
+    var paperTape: [String]
     var accumulatedFrames: Int
     var pendingOperation: CalcOperation
 
