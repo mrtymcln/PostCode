@@ -94,12 +94,11 @@ class AppViewModel {
 	/// scroll-to-bottom animations) that shouldn't fire during initial load.
 	@ObservationIgnored private var isLoading = false
 
-	// MARK: - UNDO STACK
-	// Lightweight mode-specific undo. Instead of storing a full AppStateSnapshot
-	// (which deep-copies paperTape + runList on every push), each entry only
-	// captures the data for the mode the destructive action occurred in.
+	// MARK: - UNDO STACKS
+	// Each mode keeps its own undo stack so a Cmd-Z. Each entry captures
+	// only the data for the mode the destructive action occurred in,
+	// avoiding a full AppStateSnapshot deep-copy on every push.
 
-	/// Mode-specific undo payload — only stores what's needed to restore.
 	enum UndoPayload {
 		case calc(
 			inputString: String,
@@ -123,10 +122,9 @@ class AppViewModel {
 		let label: String
 	}
 
-	@ObservationIgnored private var undoStack: [UndoEntry] = []
+	@ObservationIgnored private var undoStacks: [AppMode: [UndoEntry]] = [:]
 	@ObservationIgnored private let maxUndoLevels = 5
 
-	/// Drives the "Undo <action>?" confirmation alert in ContentView.
 	var showUndoAlert = false
 	var undoActionLabel = ""
 
@@ -667,23 +665,31 @@ class AppViewModel {
 				convInputString: convInputString
 			)
 		}
-		undoStack.append(UndoEntry(payload: payload, label: label))
-		if undoStack.count > maxUndoLevels {
-			undoStack.removeFirst()
+		// Push onto the current mode's stack. Other modes' stacks are
+		// untouched, so Cmd-Z in another mode will not pop this entry.
+		var stack = undoStacks[mode] ?? []
+		stack.append(UndoEntry(payload: payload, label: label))
+		if stack.count > maxUndoLevels {
+			stack.removeFirst()
 		}
+		undoStacks[mode] = stack
 	}
 
-	/// Shows the confirmation alert if applicable.
+	/// Shows the confirmation alert if applicable, surfacing the label of
+	/// the most recent destructive action **in the current mode only**.
 	func requestUndo() {
-		guard let entry = undoStack.last else { return }
+		guard let entry = undoStacks[mode]?.last else { return }
 		undoActionLabel = entry.label
 		showUndoAlert = true
 	}
 
-	/// Pops the undo stack and restores only the affected mode's state.
-	/// Wrapped in `isLoading` to suppress tapeRevision side effects.
+	/// Pops the current mode's undo stack and restores that mode's state.
+	/// Other modes' stacks are untouched. Wrapped in `isLoading` to
+	/// suppress tapeRevision side effects.
 	func undo() {
-		guard let entry = undoStack.popLast() else { return }
+		var stack = undoStacks[mode] ?? []
+		guard let entry = stack.popLast() else { return }
+		undoStacks[mode] = stack
 		isLoading = true
 		defer { isLoading = false }
 
