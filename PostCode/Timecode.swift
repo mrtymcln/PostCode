@@ -13,7 +13,7 @@ import Foundation
 
 // MARK: - TIMECODE CALCULATOR
 
-struct TimecodeCalculator {
+nonisolated struct TimecodeCalculator {
 
 	// MARK: - Frames → Timecode String
 	/// Converts an integer frame count into a SMPTE timecode display string.
@@ -187,7 +187,7 @@ struct TimecodeCalculator {
 
 // MARK: - STRING HELPERS
 
-extension String {
+nonisolated extension String {
 	/// Pads the string on the left to reach the target length.
 	/// Used when pasting to normalise partial group entries
 	/// (e.g. "1:2:3:4" becomes "01:02:03:04").

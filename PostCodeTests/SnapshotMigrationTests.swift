@@ -16,7 +16,6 @@ import Testing
 // init(from:) could ship and corrupt every user's saved state.
 
 @Suite("AppStateSnapshot migration")
-@MainActor
 struct SnapshotMigrationTests {
 
 	private let decoder = JSONDecoder()

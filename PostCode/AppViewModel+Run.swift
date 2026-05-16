@@ -158,11 +158,19 @@ extension AppViewModel {
 
 	// MARK: - CSV EXPORT
 
+	/// Writes the current list as a CSV file to the temp directory
+	/// and returns its URL for sharing.
+	///
+	/// We deliberately stuck with `ShareLink(item: url)`
+	/// rather than a `Transferable`-wrapped lazy representation: the
+	/// latter triggers an `NSException` crash on Mac.
+	/// URL-based sharing is the simplest method that doesn't crash.
+	///
+	/// Trade off: because `Menu` evaluates its content view-builder on
+	/// every parent render, this function runs (and overwrites the temp
+	/// file) on each re-render of the header. Not as bad as a crashy Mac build!
 	func generateCSV() -> URL {
-		var csvString = "Frame Rate:,\(runFrameRate.id)\n"
-		csvString += "Display Mode:,\(isFramesMode ? "Frames" : "Timecode")\n"
-		csvString += "\n"
-		csvString += "Segment,In,Out,Duration,Total Run Time\n"
+		var csvString = "Segment,In,Out,Duration,Total Run Time\n"
 		var cumulativeFrames = 0
 
 		for (index, item) in runList.enumerated() {
@@ -181,10 +189,12 @@ extension AppViewModel {
 				"\(index + 1),\(inStr),\(outStr),\(durStr),\(totalString)\n"
 			csvString.append(row)
 		}
+		csvString += "\n"
+		csvString += "Frame Rate:,\(runFrameRate.id)\n"
+		csvString += "Display:,\(isFramesMode ? "Frames" : "Timecode")\n"
 
-		let fileName = "PostCode_RunList_Output.csv"
 		let path = FileManager.default.temporaryDirectory
-			.appendingPathComponent(fileName)
+			.appendingPathComponent("PostCode_List.csv")
 
 		do {
 			try csvString.write(to: path, atomically: true, encoding: .utf8)

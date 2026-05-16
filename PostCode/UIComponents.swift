@@ -77,15 +77,14 @@ struct HeroText: View {
 			.lineLimit(1)
 			.fixedSize(horizontal: false, vertical: true)
 			.frame(maxWidth: .infinity, alignment: .trailing)
-			.background(
-				GeometryReader { geo in
-					Color.clear
-						.onAppear { measuredWidth = geo.size.width }
-						.onChange(of: geo.size.width) { _, w in
-							measuredWidth = w
-						}
-				}
-			)
+			// AGENTS.md prefers `onGeometryChange` over `GeometryReader`
+			// for self-measurement. Fires once on appear and again on
+			// each width change — no need for a background measuring view.
+			.onGeometryChange(for: CGFloat.self) { proxy in
+				proxy.size.width
+			} action: { newWidth in
+				measuredWidth = newWidth
+			}
 	}
 }
 
@@ -503,7 +502,9 @@ struct TextShareButton: View {
 	}
 }
 
-/// ShareLink wrapper for CSV file export.
+/// ShareLink wrapper for CSV file export. URL-based ShareLink — the
+/// simplest, most cross-platform-compatible path (see the trade-off
+/// note on `AppViewModel.generateCSV()` re. Mac Designed-for-iPad).
 struct CSVShareButton: View {
 	let url: URL
 

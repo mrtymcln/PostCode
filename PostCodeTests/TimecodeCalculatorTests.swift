@@ -13,7 +13,6 @@ import Testing
 // against the SMPTE standard.
 
 @Suite("TimecodeCalculator")
-@MainActor
 struct TimecodeCalculatorTests {
 
 	// MARK: - framesToString — Standard rates

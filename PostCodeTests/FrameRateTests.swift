@@ -10,7 +10,6 @@ import Testing
 // drop-frame display, NTSC pull-down, or paste parsing.
 
 @Suite("FrameRate")
-@MainActor
 struct FrameRateTests {
 
 	// MARK: - Identifiable display strings

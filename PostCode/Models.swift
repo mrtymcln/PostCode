@@ -13,7 +13,7 @@ import Foundation
 /// `.separator`       		— a visual divider between calculations
 /// Each case carries enough data to fully reconstruct the display
 /// without re-running the calculation.
-enum TapeEntryType: Codable, Equatable, Sendable {
+nonisolated enum TapeEntryType: Codable, Equatable, Sendable {
 	case input(frames: Int, isAnswer: Bool = false)
 	case operatorSymbol(CalcOperation)
 	case result(frames: Int)
@@ -24,7 +24,7 @@ enum TapeEntryType: Codable, Equatable, Sendable {
 /// Wrapper around TapeEntryType that adds a stable identity for SwiftUI lists.
 /// Using a UUID means ForEach can animate insertions and deletions
 /// correctly, even when two entries have the same frame value.
-struct TapeEntry: Codable, Identifiable, Equatable, Sendable {
+nonisolated struct TapeEntry: Codable, Identifiable, Equatable, Sendable {
 	var id = UUID()
 	var type: TapeEntryType
 
@@ -46,7 +46,7 @@ struct TapeEntry: Codable, Identifiable, Equatable, Sendable {
 /// `lastWasEquals` is optional for backward compatibility: older saves
 /// did not include it, so the decoder falls back to deriving the value
 /// from whether the tape ends with a `.result` entry.
-struct AppStateSnapshot: Codable, Sendable {
+nonisolated struct AppStateSnapshot: Codable, Sendable {
 
 	/// Bump this when the schema changes. The encoder always writes it.
 	static let currentVersion = 2
@@ -217,7 +217,7 @@ struct AppStateSnapshot: Codable, Sendable {
 // MARK: - APP MODE
 /// Saved as a string to serialise cleanly in the persistence snapshot.
 /// CaseIterable powers the header/sidebar mode picker.
-enum AppMode: String, Codable, CaseIterable, Sendable {
+nonisolated enum AppMode: String, Codable, CaseIterable, Sendable {
 	case calc, run, conv
 }
 
@@ -227,7 +227,7 @@ enum AppMode: String, Codable, CaseIterable, Sendable {
 /// `symbol` is the single source of truth for the display character —
 /// used by both the paper tape view and the text export function,
 /// eliminating duplicate switch blocks.
-enum CalcOperation: String, Codable, Sendable {
+nonisolated enum CalcOperation: String, Codable, Sendable {
 	case none, add, subtract, multiply, divide
 	/// Single source of truth — used by CalculatorView tape rows and exportText.
 	var symbol: String {
@@ -246,7 +246,7 @@ enum CalcOperation: String, Codable, Sendable {
 /// the original In and Out points can be displayed and exported.
 /// Duration uses inclusive counting: `out − in + 1` as per AVID convention.
 /// If the In and Out point are the same frame, the duration is 1 frame, not zero.
-struct Segment: Identifiable, Hashable, Sendable {
+nonisolated struct Segment: Identifiable, Hashable, Sendable {
 	let id: UUID
 	let inFrames: Int
 	let outFrames: Int
@@ -264,7 +264,7 @@ struct Segment: Identifiable, Hashable, Sendable {
 /// Old versions stored `durationFrames` only, no in or out points.
 /// We can reconstruct using In = 0, out = duration − 1
 /// New saves always write `inFrames` and `outFrames`.
-extension Segment: Codable {
+nonisolated extension Segment: Codable {
 	private enum CodingKeys: String, CodingKey {
 		case id, inFrames, outFrames
 		case durationFrames
@@ -304,7 +304,7 @@ extension Segment: Codable {
 
 // MARK: - RUN FIELD
 
-enum RunField: Sendable {
+nonisolated enum RunField: Sendable {
 	case inPoint, outPoint
 }
 
@@ -317,7 +317,7 @@ enum RunField: Sendable {
 /// The `.custom(Double)` case allows arbitrary frame rates.
 /// Its display is formatted via a static cached NumberFormatter to avoid per-access allocation.
 
-enum FrameRate: Hashable, Codable, Identifiable, CaseIterable, Sendable {
+nonisolated enum FrameRate: Hashable, Codable, Identifiable, CaseIterable, Sendable {
 	case fps23976
 	case fps24
 	case fps25
