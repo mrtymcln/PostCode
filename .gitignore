@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Xcode — per-user state, never commit
+xcuserdata/
+*.xcuserstate
+
+# Xcode build output
+build/
+DerivedData/
+*.dSYM
+*.dSYM.zip
+*.ipa
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Package.resolved
+
+# Claude Code workspace
+.claude/
+
+# Personal IDE settings
+.idea/
+.vscode/
