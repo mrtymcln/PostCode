@@ -226,7 +226,7 @@ struct RunInputArea: View {
 			)
 			.contentShape(Rectangle())
 			.onTapGesture {
-				DispatchQueue.main.async { vm.activeRunField = .inPoint }
+				Task { @MainActor in vm.activeRunField = .inPoint }
 			}
 			.contextMenu {
 				Button {
@@ -258,7 +258,7 @@ struct RunInputArea: View {
 			)
 			.contentShape(Rectangle())
 			.onTapGesture {
-				DispatchQueue.main.async { vm.activeRunField = .outPoint }
+				Task { @MainActor in vm.activeRunField = .outPoint }
 			}
 			.contextMenu {
 				Button {

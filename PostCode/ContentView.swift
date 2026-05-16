@@ -39,12 +39,11 @@ struct ContentView: View {
 			// Inject available height into the environment so child views
 			// (KeypadView, RunInputArea) can scale their spacing responsively.
 			.environment(\.availableHeight, geo.size.height)
-			.onAppear {
+			.task {
 				// Brief delay ensures the view hierarchy is fully mounted
 				// before requesting focus — prevents dropped key events.
-				DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-					isViewFocused = true
-				}
+				try? await Task.sleep(for: .seconds(0.1))
+				isViewFocused = true
 			}
 			.focusable(true)
 			.focused($isViewFocused)
@@ -55,7 +54,7 @@ struct ContentView: View {
 
 		// MARK: Exit List Edit On State Change
 		.onChange(of: vm.mode) { _, _ in
-			DispatchQueue.main.async {
+			Task { @MainActor in
 				runListEditMode = .inactive
 			}
 		}
@@ -64,7 +63,8 @@ struct ContentView: View {
 		.onChange(of: vm.showEasterEgg) { _, show in
 			if show {
 				withAnimation(.easeIn(duration: 0.2)) { showBolt = true }
-				DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+				Task { @MainActor in
+					try? await Task.sleep(for: .seconds(1.5))
 					withAnimation(.easeOut(duration: 0.5)) { showBolt = false }
 					vm.showEasterEgg = false
 				}
@@ -408,7 +408,7 @@ extension ContentView {
 
 		// MARK: Tab
 		if press.key == .tab && vm.mode == .run {
-			DispatchQueue.main.async {
+			Task { @MainActor in
 				withAnimation {
 					vm.activeRunField =
 						(vm.activeRunField == .inPoint) ? .outPoint : .inPoint

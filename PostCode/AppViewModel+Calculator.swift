@@ -236,8 +236,8 @@ extension AppViewModel {
 		let isNegative = cleanString.hasPrefix("-")
 		if isNegative { cleanString.removeFirst() }
 
-		let rawString = cleanString.replacingOccurrences(of: ":", with: "")
-			.replacingOccurrences(of: ";", with: "")
+		let rawString = cleanString.replacing(":", with: "")
+			.replacing(";", with: "")
 		inputString = isNegative ? "-" + rawString : rawString
 		lastWasEquals = false
 		accumulatedFrames = 0

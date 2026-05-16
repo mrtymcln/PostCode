@@ -33,7 +33,10 @@ extension AppViewModel {
 		let h = Int(totalSeconds / 3600)
 		let m = Int((totalSeconds.truncatingRemainder(dividingBy: 3600)) / 60)
 		let s = totalSeconds.truncatingRemainder(dividingBy: 60)
-		return String(format: "Real Time: %dh %dm %.1fs", h, m, s)
+		let secondsFormatted = s.formatted(
+			.number.precision(.fractionLength(1))
+		)
+		return "Real Time: \(h)h \(m)m \(secondsFormatted)s"
 	}
 
 	// MARK: - INPUT FORMATTING

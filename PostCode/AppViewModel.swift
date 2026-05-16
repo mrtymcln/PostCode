@@ -643,8 +643,8 @@ class AppViewModel {
 	private func toTcString(_ input: String, fps: FrameRate) -> String {
 		guard let fc = Int(input) else { return input }
 		let tc = TimecodeCalculator.framesToString(totalFrames: fc, fps: fps)
-		let raw = tc.replacingOccurrences(of: ":", with: "")
-			.replacingOccurrences(of: ";", with: "")
+		let raw = tc.replacing(":", with: "")
+			.replacing(";", with: "")
 		if let val = Int(raw) { return "\(val)" }
 		return raw
 	}
@@ -840,7 +840,7 @@ class AppViewModel {
 	func saveState() {
 		saveTask?.cancel()
 		saveTask = Task { [weak self] in
-			try? await Task.sleep(nanoseconds: 2_000_000_000)
+			try? await Task.sleep(for: .seconds(2))
 			guard !Task.isCancelled else { return }
 			self?.saveImmediate()
 		}
