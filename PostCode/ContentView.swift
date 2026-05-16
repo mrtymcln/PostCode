@@ -1,24 +1,6 @@
 import StoreKit
 import SwiftUI
 
-// MARK: - SHAKE DETECTION
-
-extension Notification.Name {
-	static let deviceDidShake = Notification.Name("deviceDidShake")
-}
-
-extension UIWindow {
-	open override func motionEnded(
-		_ motion: UIEvent.EventSubtype,
-		with event: UIEvent?
-	) {
-		if motion == .motionShake {
-			NotificationCenter.default.post(name: .deviceDidShake, object: nil)
-		}
-		super.motionEnded(motion, with: event)
-	}
-}
-
 // MARK: - CONTENT VIEW
 
 struct ContentView: View {
@@ -153,10 +135,7 @@ struct ContentView: View {
 		)
 
 		// MARK: Shake To Undo
-		.onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) {
-			_ in
-			vm.requestUndo()
-		}
+		.onShake { vm.requestUndo() }
 
 		// MARK: Undo Confirmation Alert
 		.alert("Undo \(vm.undoActionLabel)?", isPresented: $vm.showUndoAlert) {

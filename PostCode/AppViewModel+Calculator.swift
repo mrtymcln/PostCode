@@ -158,7 +158,6 @@ extension AppViewModel {
 	func calculateResult() {
 		guard pendingOperation != .none else { return }
 		if inputString.isEmpty && !lastWasEquals { return }
-		guard !inputString.isEmpty || pendingOperation != .none else { return }
 		pushUndo(label: "calculation")
 		let currentFrames =
 			isFramesMode
@@ -232,7 +231,7 @@ extension AppViewModel {
 			fps: calcFrameRate
 		)
 
-		// Convert the TC string back to raw digits for the input field
+		// Convert the TC string back to raw digits for the input field.
 		var cleanString = tcString
 		let isNegative = cleanString.hasPrefix("-")
 		if isNegative { cleanString.removeFirst() }
@@ -244,7 +243,7 @@ extension AppViewModel {
 		accumulatedFrames = 0
 		pendingOperation = .none
 
-		// Record on the tape with isAnswer flag for recalculation tracking
+		// Record on the tape with isAnswer flag for recalculation tracking.
 		paperTape.append(
 			TapeEntry(type: .input(frames: framesToRecall, isAnswer: true))
 		)

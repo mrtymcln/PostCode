@@ -440,7 +440,20 @@ class AppViewModel {
 	/// and replaces the active field entirely. The fallback strips non-digits
 	/// and appends them up to the remaining capacity.
 	func processPastedText(_ string: String) {
-		// In FR mode, just extract digits.
+		// Capture undo state up-front, so the user can back out of any
+		// paste that overwrote real work. Skip when active field is empty.
+		let activeFieldHasContent: Bool
+		switch mode {
+		case .calc:
+			activeFieldHasContent = !inputString.isEmpty || !paperTape.isEmpty
+		case .run:
+			activeFieldHasContent =
+				!runInString.isEmpty || !runOutString.isEmpty
+		case .conv:
+			activeFieldHasContent = !convInputString.isEmpty
+		}
+
+		// TC mode: try structured timecode parsing first.
 		if !isFramesMode {
 			let fps: FrameRate
 			switch mode {
@@ -449,6 +462,19 @@ class AppViewModel {
 			case .conv: fps = convSourceRate
 			}
 			if let parsed = parseStructuredTimecode(string, fps: fps) {
+				// Reject pastes that don't round-trip through
+				// inputToFrames → framesToString. Drop-frame timecodes
+				// like "00:01:00;00" at 29.97 DF parse to a frame count
+				// that displays as a DIFFERENT timecode — silently
+				// changing the user's value. Better to shake and let
+				// the user paste a real timecode.
+				guard pasteRoundTripsCleanly(parsed: parsed, fps: fps) else {
+					triggerErrorShake()
+					return
+				}
+				if activeFieldHasContent {
+					pushUndo(label: "Paste")
+				}
 				applyParsedPaste(parsed)
 				saveState()
 				return
@@ -458,6 +484,10 @@ class AppViewModel {
 		// Fallback: strip non-digits and append up to the remaining capacity.
 		let cleaned = string.filter { "0123456789".contains($0) }
 		guard !cleaned.isEmpty else { return }
+
+		if activeFieldHasContent {
+			pushUndo(label: "Paste")
+		}
 
 		switch mode {
 		case .calc:
@@ -493,6 +523,30 @@ class AppViewModel {
 			}
 		}
 		saveState()
+	}
+
+	/// Checks whether a parsed timecode survives the round trip
+	/// `inputToFrames → framesToString → strip separators → strip leading zeros`
+	/// without changing value. Catches drop-frame skipped frame numbers
+	/// and other invalid TC inputs that would otherwise apply silently
+	/// as a different value than the user pasted.
+	private func pasteRoundTripsCleanly(parsed: String, fps: FrameRate) -> Bool
+	{
+		let frames = TimecodeCalculator.inputToFrames(
+			input: parsed, fps: fps
+		)
+		let canonical = TimecodeCalculator.framesToString(
+			totalFrames: frames, fps: fps
+		)
+		let canonicalDigits =
+			canonical
+			.replacing("-", with: "")
+			.replacing(":", with: "")
+			.replacing(";", with: "")
+		let canonicalStripped = String(canonicalDigits.drop { $0 == "0" })
+		let parsedDigits =
+			parsed.hasPrefix("-") ? String(parsed.dropFirst()) : parsed
+		return parsedDigits == canonicalStripped
 	}
 
 	/// Applies a fully-parsed timecode string, replacing the active field entirely.
