@@ -32,23 +32,38 @@ struct KeypadView: View {
 
 		VStack(spacing: verticalSpacing) {
 			Group {
-				rowOne(w: finalButtonW, h: finalButtonH)
-				rowTwo(w: finalButtonW, h: finalButtonH)
+				KeypadRow1(
+					vm: vm, w: finalButtonW, h: finalButtonH, spacing: spacing
+				)
+				KeypadRow2(
+					vm: vm, w: finalButtonW, h: finalButtonH, spacing: spacing
+				)
 			}
 			Group {
-				rowThree(w: finalButtonW, h: finalButtonH)
-				rowFour(w: finalButtonW, h: finalButtonH)
-				rowFive(w: finalButtonW, h: finalButtonH)
+				KeypadRow3(
+					vm: vm, w: finalButtonW, h: finalButtonH, spacing: spacing
+				)
+				KeypadRow4(
+					vm: vm, w: finalButtonW, h: finalButtonH, spacing: spacing
+				)
+				KeypadRow5(
+					vm: vm, w: finalButtonW, h: finalButtonH, spacing: spacing
+				)
 			}
 		}
 		.frame(maxWidth: .infinity)
 	}
+}
 
-	// MARK: - ROW BUILDERS
+// MARK: - Row 1 [AC, Negate, Ans, ÷]
 
-	// MARK: Row 1 [AC, Negate, Ans, ÷]
-	@ViewBuilder
-	private func rowOne(w: CGFloat, h: CGFloat) -> some View {
+private struct KeypadRow1: View {
+	var vm: AppViewModel
+	let w: CGFloat
+	let h: CGFloat
+	let spacing: CGFloat
+
+	var body: some View {
 		if vm.mode == .calc {
 			HStack(spacing: spacing) {
 				CalcButton(
@@ -93,10 +108,17 @@ struct KeypadView: View {
 			}
 		}
 	}
+}
 
-	// MARK: Row 2 [7, 8, 9, X]
-	@ViewBuilder
-	private func rowTwo(w: CGFloat, h: CGFloat) -> some View {
+// MARK: - Row 2 [7, 8, 9, ×]
+
+private struct KeypadRow2: View {
+	var vm: AppViewModel
+	let w: CGFloat
+	let h: CGFloat
+	let spacing: CGFloat
+
+	var body: some View {
 		HStack(spacing: spacing) {
 			CalcButton(
 				label: "7",
@@ -134,10 +156,17 @@ struct KeypadView: View {
 			}
 		}
 	}
+}
 
-	// MARK: Row 3 [4, 5, 6, -]
-	@ViewBuilder
-	private func rowThree(w: CGFloat, h: CGFloat) -> some View {
+// MARK: - Row 3 [4, 5, 6, −]
+
+private struct KeypadRow3: View {
+	var vm: AppViewModel
+	let w: CGFloat
+	let h: CGFloat
+	let spacing: CGFloat
+
+	var body: some View {
 		HStack(spacing: spacing) {
 			CalcButton(
 				label: "4",
@@ -175,10 +204,17 @@ struct KeypadView: View {
 			}
 		}
 	}
+}
 
-	// MARK: Row 4 [1, 2, 3, +]
-	@ViewBuilder
-	private func rowFour(w: CGFloat, h: CGFloat) -> some View {
+// MARK: - Row 4 [1, 2, 3, +]
+
+private struct KeypadRow4: View {
+	var vm: AppViewModel
+	let w: CGFloat
+	let h: CGFloat
+	let spacing: CGFloat
+
+	var body: some View {
 		HStack(spacing: spacing) {
 			CalcButton(
 				label: "1",
@@ -227,11 +263,17 @@ struct KeypadView: View {
 			}
 		}
 	}
+}
 
-	// MARK: Row 5 [00, 0, Delete, =]
+// MARK: - Row 5 [00, 0, Delete, =]
 
-	@ViewBuilder
-	private func rowFive(w: CGFloat, h: CGFloat) -> some View {
+private struct KeypadRow5: View {
+	var vm: AppViewModel
+	let w: CGFloat
+	let h: CGFloat
+	let spacing: CGFloat
+
+	var body: some View {
 		HStack(spacing: spacing) {
 			CalcButton(
 				label: "00",

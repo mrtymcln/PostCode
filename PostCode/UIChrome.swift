@@ -12,13 +12,16 @@ struct AppSidebar: View {
 			Spacer()
 
 			// MARK: Calc Mode Button
-			sidebarCustomButton(mode: .calc, label: "Calc") { color in
+			AppSidebarCustomButton(vm: vm, mode: .calc, label: "Calc") { color in
 				CalculatorIcon(color: color)
 			}
 
 			// MARK: Run & Conv Mode Buttons
-			sidebarButton(mode: .run, icon: "figure.run", label: "Run")
-			sidebarButton(
+			AppSidebarButton(
+				vm: vm, mode: .run, icon: "figure.run", label: "Run"
+			)
+			AppSidebarButton(
+				vm: vm,
 				mode: .conv,
 				icon: "arrow.up.arrow.down",
 				label: "Conv"
@@ -31,11 +34,16 @@ struct AppSidebar: View {
 		.background(Color.black)
 		.zIndex(20)
 	}
+}
 
-	// MARK: Standard Sidebar Button
-	private func sidebarButton(mode: AppMode, icon: String, label: String)
-		-> some View
-	{
+// MARK: Standard Sidebar Button
+private struct AppSidebarButton: View {
+	var vm: AppViewModel
+	let mode: AppMode
+	let icon: String
+	let label: String
+
+	var body: some View {
 		Button(action: {
 			withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
 				vm.mode = mode
@@ -57,13 +65,16 @@ struct AppSidebar: View {
 		.accessibilityLabel("\(label) mode")
 		.accessibilityAddTraits(vm.mode == mode ? .isSelected : [])
 	}
+}
 
-	// MARK: Custom Sidebar Button
-	private func sidebarCustomButton<Icon: View>(
-		mode: AppMode,
-		label: String,
-		@ViewBuilder icon: (Color) -> Icon
-	) -> some View {
+// MARK: Custom Sidebar Button
+private struct AppSidebarCustomButton<Icon: View>: View {
+	var vm: AppViewModel
+	let mode: AppMode
+	let label: String
+	@ViewBuilder let icon: (Color) -> Icon
+
+	var body: some View {
 		Button(action: {
 			withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
 				vm.mode = mode
@@ -182,16 +193,32 @@ struct AppHeader: View {
 			}
 
 			Spacer()
-			actionButtons
+			AppHeaderActionButtons(vm: vm, runListEditMode: $runListEditMode)
 		}
 		.padding(.horizontal, isPad ? 0 : 16)
 	}
 
-	// MARK: - ACTION BUTTONS
-	// When editing the list, shows "Done" button. Otherwise, shows "Share" button.
-	// Run mode gets share menu with TXT and CSV; other modes get a simple sharelink.
+	// MARK: - HELPERS
+	/// Returns the SF Symbol name for the current mode's icon.
+	/// Calculator uses a custom icon, so returns empty string.
+	private func getIconForMode() -> String {
+		switch vm.mode {
+		case .calc: return ""
+		case .run: return "figure.run"
+		case .conv: return "arrow.up.arrow.down"
+		}
+	}
+}
 
-	private var actionButtons: some View {
+// MARK: - ACTION BUTTONS
+// When editing the list, shows "Done" button. Otherwise, shows "Share" button.
+// Run mode gets share menu with TXT and CSV; other modes get a simple sharelink.
+
+private struct AppHeaderActionButtons: View {
+	var vm: AppViewModel
+	@Binding var runListEditMode: EditMode
+
+	var body: some View {
 		HStack(spacing: 16) {
 			if runListEditMode == .active {
 
@@ -233,17 +260,6 @@ struct AppHeader: View {
 				}
 				.transition(.opacity)
 			}
-		}
-	}
-
-	// MARK: - HELPERS
-	/// Returns the SF Symbol name for the current mode's icon.
-	/// Calculator uses a custom icon, so returns empty string.
-	private func getIconForMode() -> String {
-		switch vm.mode {
-		case .calc: return ""
-		case .run: return "figure.run"
-		case .conv: return "arrow.up.arrow.down"
 		}
 	}
 }

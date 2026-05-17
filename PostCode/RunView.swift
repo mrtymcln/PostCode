@@ -6,22 +6,24 @@ struct RunView: View {
 	var vm: AppViewModel
 	@Binding var editMode: EditMode
 
-	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
-	private var isPad: Bool { horizontalSizeClass == .regular }
-
 	// MARK: - BODY
 
 	var body: some View {
 		VStack(spacing: 0) {
-			runHeaderView
+			RunHeaderView(vm: vm)
 
 			ScrollViewReader { proxy in
 				List {
 					ForEach(Array(vm.runList.enumerated()), id: \.element.id) {
 						index,
 						entry in
-						runListRow(index: index, entry: entry)
-							.id(entry.id)
+						RunListRow(
+							vm: vm,
+							editMode: $editMode,
+							index: index,
+							entry: entry
+						)
+						.id(entry.id)
 					}
 					.onDelete { indexSet in
 						// Disable swipe-delete whilst in edit mode
@@ -49,17 +51,19 @@ struct RunView: View {
 		}
 		.sensoryFeedback(.success, trigger: vm.copySuccessTrigger)
 	}
+}
 
-	// MARK: - TRT CARD
-	// Shows the total run time in large green hero text, with an optional
-	// Real Time value for NTSC non-drop frame rates where 'wall clock'
-	// duration differs from timecode duration.
+// MARK: - TRT CARD
+// Shows the total run time in large green hero text, with an optional
+// Real Time value for NTSC non-drop frame rates where 'wall clock'
+// duration differs from timecode duration.
 
-	private var runHeaderView: some View {
+private struct RunHeaderView: View {
+	var vm: AppViewModel
+
+	var body: some View {
 		HStack {
-			Text("TRT:").font(.headline).bold().foregroundStyle(
-				.white
-			)
+			Text("TRT:").font(.headline).bold().foregroundStyle(.white)
 			Spacer()
 			VStack(alignment: .trailing, spacing: 2) {
 				HeroText(text: vm.runTotalString, color: AppTheme.green)
@@ -92,14 +96,23 @@ struct RunView: View {
 			"Total run time: \(vm.runTotalString)\(vm.runRealTimeString.map { ", \($0)" } ?? "")"
 		)
 	}
+}
 
-	// MARK: - SEGMENT ROW
-	// Duration is right-aligned and bold — it's the most important value.
-	// The row width adapts between iPhone (140pt duration column) and
-	// iPad (200pt) to accommodate longer timecode strings.
+// MARK: - SEGMENT ROW
+// Duration is right-aligned and bold — it's the most important value.
+// The row width adapts between iPhone (140pt duration column) and
+// iPad (200pt) to accommodate longer strings.
 
-	@ViewBuilder
-	private func runListRow(index: Int, entry: Segment) -> some View {
+private struct RunListRow: View {
+	var vm: AppViewModel
+	@Binding var editMode: EditMode
+	let index: Int
+	let entry: Segment
+
+	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
+	private var isPad: Bool { horizontalSizeClass == .regular }
+
+	var body: some View {
 		HStack(spacing: 6) {
 
 			// MARK: Segment Number
@@ -219,15 +232,16 @@ struct RunInputArea: View {
 		HStack(spacing: 12) {
 
 			// MARK: In Field
-			RunInputField(
-				label: "IN:",
-				value: vm.formattedRunInput(vm.runInString),
-				isActive: vm.activeRunField == .inPoint
-			)
-			.contentShape(Rectangle())
-			.onTapGesture {
-				Task { @MainActor in vm.activeRunField = .inPoint }
+			Button {
+				vm.activeRunField = .inPoint
+			} label: {
+				RunInputField(
+					label: "IN:",
+					value: vm.formattedRunInput(vm.runInString),
+					isActive: vm.activeRunField == .inPoint
+				)
 			}
+			.buttonStyle(.plain)
 			.contextMenu {
 				Button {
 					UIPasteboard.general.string = vm.formattedRunInput(
@@ -250,16 +264,17 @@ struct RunInputArea: View {
 			}
 
 			// MARK: Out Field
-			RunInputField(
-				label: "OUT:",
-				value: vm.formattedRunInput(vm.runOutString),
-				isActive: vm.activeRunField == .outPoint,
-				activeColor: outIsValid ? AppTheme.green : .red
-			)
-			.contentShape(Rectangle())
-			.onTapGesture {
-				Task { @MainActor in vm.activeRunField = .outPoint }
+			Button {
+				vm.activeRunField = .outPoint
+			} label: {
+				RunInputField(
+					label: "OUT:",
+					value: vm.formattedRunInput(vm.runOutString),
+					isActive: vm.activeRunField == .outPoint,
+					activeColor: outIsValid ? AppTheme.green : .red
+				)
 			}
+			.buttonStyle(.plain)
 			.contextMenu {
 				Button {
 					UIPasteboard.general.string = vm.formattedRunInput(

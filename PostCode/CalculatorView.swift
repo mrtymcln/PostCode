@@ -7,12 +7,15 @@ struct CalculatorView: View {
 
 	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
 	private var isPad: Bool { horizontalSizeClass == .regular }
-	private var tapeFontSize: CGFloat { isPad ? 32 : 28 }
 	private var tapeSpacing: CGFloat { isPad ? 12 : 8 }
 
 	// MARK: - BODY
 
 	var body: some View {
+		// I know onGeometryChange is prefered, but the inner
+		// `minHeight: geo.size.height + alignment: .bottom` pattern
+		// anchors shorter tape content to the visible bottom - whilst
+		// allowing longer content to scroll naturally.
 		GeometryReader { geo in
 			ScrollView {
 				ScrollViewReader { proxy in
@@ -34,12 +37,12 @@ struct CalculatorView: View {
 							Array(historySlice.enumerated()),
 							id: \.element.id
 						) { index, entry in
-							paperTapeRow(index: index, entry: entry)
+							PaperTapeRow(vm: vm, index: index, entry: entry)
 						}
 
 						// MARK: Active Hero Line
 
-						activeLineView
+						CalcActiveLine(vm: vm)
 							.id("bottom")
 							.padding(.top, 4)
 					}
@@ -70,18 +73,21 @@ struct CalculatorView: View {
 		.clipShape(RoundedRectangle(cornerRadius: 12))
 		.sensoryFeedback(.success, trigger: vm.copySuccessTrigger)
 	}
+}
 
-	// MARK: - ACTIVE HERO ROW
-	// The result (green, prefixed with "=") if equals was just pressed.
-	// The current input (white, prefixed with " ") if otherwise.
+// MARK: - ACTIVE HERO ROW
+// The result (green, prefixed with "=") if equals was just pressed.
+// The current input (white, prefixed with " ") if otherwise.
 
-	@ViewBuilder
-	private var activeLineView: some View {
+private struct CalcActiveLine: View {
+	var vm: AppViewModel
+
+	var body: some View {
 		if vm.lastWasEquals, let lastEntry = vm.paperTape.last,
 			case .result(let frames) = lastEntry.type
 		{
 			// MARK: Result Display
-			let content = formatFrames(frames)
+			let content = format(frames)
 
 			HeroText(text: "=" + content, color: AppTheme.green)
 				.contextMenu {
@@ -125,14 +131,27 @@ struct CalculatorView: View {
 		}
 	}
 
-	// MARK: - HISTORY ROWS
-	// .separator  > thin grey horizontal line
-	// .input      > right-aligned timecode value
-	// .operator   > operator symbol (+, −, ×, ÷)
-	// .result     > green "= value" (bold)
+	private func format(_ frames: Int) -> String {
+		vm.isFramesMode
+			? "\(frames)"
+			: TimecodeCalculator.framesToString(
+				totalFrames: frames, fps: vm.calcFrameRate
+			)
+	}
+}
 
-	@ViewBuilder
-	private func paperTapeRow(index: Int, entry: TapeEntry) -> some View {
+// MARK: - HISTORY ROWS
+// .separator  > thin grey horizontal line
+// .input      > right-aligned timecode value
+// .operator   > operator symbol (+, −, ×, ÷)
+// .result     > green "= value"
+
+private struct PaperTapeRow: View {
+	var vm: AppViewModel
+	let index: Int
+	let entry: TapeEntry
+
+	var body: some View {
 		switch entry.type {
 		case .separator:
 			Rectangle()
@@ -140,33 +159,49 @@ struct CalculatorView: View {
 				.frame(height: 1)
 				.padding(.vertical, 12)
 		case .input(let frames, let isAnswer):
-			let valueStr = isAnswer ? "(Ans)" : formatFrames(frames)
-			tapeRowView(index: index, op: "", value: valueStr, isResult: false)
+			let valueStr = isAnswer ? "(Ans)" : format(frames)
+			TapeRow(vm: vm, index: index, op: "", value: valueStr, isResult: false)
 		case .operatorSymbol(let op):
-			let opStr = op.symbol
-			tapeRowView(index: index, op: opStr, value: "", isResult: false)
+			TapeRow(
+				vm: vm, index: index, op: op.symbol, value: "", isResult: false
+			)
 		case .result(let frames):
-			tapeRowView(
+			TapeRow(
+				vm: vm,
 				index: index,
 				op: "=",
-				value: formatFrames(frames),
+				value: format(frames),
 				isResult: true
 			)
 		}
 	}
 
-	// MARK: Tape Row Layout
-	// Each row is an HStack with an optional operator column (fixed 30pt width)
-	// and a value column. Results are bold green; everything else is white.
-	// Context menu provides copy (for values) and delete (for all entries).
+	private func format(_ frames: Int) -> String {
+		vm.isFramesMode
+			? "\(frames)"
+			: TimecodeCalculator.framesToString(
+				totalFrames: frames, fps: vm.calcFrameRate
+			)
+	}
+}
 
-	@ViewBuilder
-	private func tapeRowView(
-		index: Int,
-		op: String,
-		value: String,
-		isResult: Bool
-	) -> some View {
+// MARK: - TAPE ROW LAYOUT
+// Each row is an HStack with an optional operator column (fixed 30pt width)
+// and a value column. Results are bold green; everything else is white.
+// Context menu provides copy (for values) and delete (for all entries).
+
+private struct TapeRow: View {
+	var vm: AppViewModel
+	let index: Int
+	let op: String
+	let value: String
+	let isResult: Bool
+
+	@Environment(\.horizontalSizeClass) private var horizontalSizeClass
+	private var isPad: Bool { horizontalSizeClass == .regular }
+	private var tapeFontSize: CGFloat { isPad ? 32 : 28 }
+
+	var body: some View {
 		HStack(alignment: .firstTextBaseline, spacing: 0) {
 			Spacer()
 			if !op.isEmpty {
@@ -215,19 +250,5 @@ struct CalculatorView: View {
 				Label("Delete", systemImage: "trash")
 			}
 		}
-	}
-
-	// MARK: - FRAME FORMATTING HELPER
-
-	/// Formats a frame count for display based on the current TC/FR mode.
-	/// In FR mode: return the raw integer.
-	/// in TC mode: convert via TimecodeCalculator at the active frame rate.
-	private func formatFrames(_ frames: Int) -> String {
-		return vm.isFramesMode
-			? "\(frames)"
-			: TimecodeCalculator.framesToString(
-				totalFrames: frames,
-				fps: vm.calcFrameRate
-			)
 	}
 }

@@ -31,9 +31,21 @@ struct ContentView: View {
 				Color.black.ignoresSafeArea()
 
 				if useSidebarLayout {
-					ipadLayout(width: geo.size.width, height: geo.size.height)
+					IpadLayout(
+						vm: vm,
+						runListEditMode: $runListEditMode,
+						isViewFocused: $isViewFocused,
+						width: geo.size.width,
+						height: geo.size.height
+					)
 				} else {
-					iphoneLayout(width: geo.size.width, height: geo.size.height)
+					IphoneLayout(
+						vm: vm,
+						runListEditMode: $runListEditMode,
+						isViewFocused: $isViewFocused,
+						width: geo.size.width,
+						height: geo.size.height
+					)
 				}
 			}
 			// Inject available height into the environment so child views
@@ -141,152 +153,6 @@ struct ContentView: View {
 		.alert("Undo \(vm.undoActionLabel)?", isPresented: $vm.showUndoAlert) {
 			Button("Undo") { withAnimation { vm.undo() } }
 			Button("Cancel", role: .cancel) {}
-		}
-	}
-}
-
-// MARK: - LAYOUTS
-
-extension ContentView {
-
-	// MARK: iPad Layout
-	private func ipadLayout(width: CGFloat, height: CGFloat) -> some View {
-		let contentWidth = width - AppTheme.sidebarTotalWidth
-		let leftPaneWidth = (contentWidth * 0.60) + AppTheme.sidebarLeadingPad
-		let rightPaneWidth = (contentWidth * 0.40) - AppTheme.sidebarLeadingPad
-
-		return HStack(spacing: 0) {
-			AppSidebar(vm: vm)
-			Rectangle().fill(Color(UIColor.systemGray6)).frame(width: 1)
-				.opacity(0.15)
-
-			HStack(spacing: 0) {
-
-				// MARK: Left Pane
-				ZStack {
-					Color.black.ignoresSafeArea()
-					VStack {
-						Group {
-							if vm.mode == .calc {
-								CalculatorView(vm: vm).transition(.slideAndFade)
-							} else if vm.mode == .run {
-								RunView(vm: vm, editMode: $runListEditMode)
-									.transition(.slideAndFade)
-							} else {
-								ConverterView(vm: vm).transition(.slideAndFade)
-							}
-						}
-					}
-					.frame(maxWidth: min(800, leftPaneWidth - 40))
-					.padding(.top, 30)
-					.padding(.bottom, 50)
-					.padding(.horizontal, 24)
-				}
-				.frame(width: leftPaneWidth, height: height)
-				.contentShape(Rectangle())
-				.onTapGesture { isViewFocused = true }
-				.animation(
-					.spring(response: 0.35, dampingFraction: 0.8),
-					value: vm.mode
-				)
-
-				Rectangle().fill(Color(UIColor.systemGray6)).frame(width: 1)
-					.opacity(0.15)
-
-				// MARK: Right Pane
-				VStack(spacing: 0) {
-					AppHeader(
-						vm: vm,
-						runListEditMode: $runListEditMode,
-						isPad: true
-					)
-					.padding(.vertical, 30).padding(.horizontal, 30)
-					.zIndex(10)
-					Spacer()
-					if vm.mode == .run {
-						RunInputArea(vm: vm, editMode: $runListEditMode)
-							.padding(.bottom, 30).padding(.horizontal, 30)
-							.transition(
-								.move(edge: .bottom).combined(with: .opacity)
-							)
-					}
-					let keypadW = min(rightPaneWidth, 420)
-					KeypadView(vm: vm, width: keypadW)
-						.frame(width: keypadW).padding(.bottom, 50)
-				}
-				.frame(width: rightPaneWidth, height: height)
-				.background(Color.black)
-			}
-		}
-	}
-
-	// MARK: iPhone Layout
-	private func iphoneLayout(width: CGFloat, height: CGFloat) -> some View {
-		let runInputPadBottom = AppTheme.scaled(
-			compact: 6,
-			regular: 10,
-			forHeight: height
-		)
-		let keypadPadBottom = AppTheme.scaled(
-			compact: 10,
-			regular: 20,
-			forHeight: height
-		)
-		let headerPadBottom = AppTheme.scaled(
-			compact: 0,
-			regular: 8,
-			forHeight: height
-		)
-
-		return VStack(spacing: 0) {
-
-			// MARK: Top Pane
-			ZStack {
-				if vm.mode == .calc {
-					CalculatorView(vm: vm).transition(.slideAndFade)
-				} else if vm.mode == .run {
-					RunView(vm: vm, editMode: $runListEditMode).transition(
-						.slideAndFade
-					)
-				} else {
-					ConverterView(vm: vm).transition(.slideAndFade)
-				}
-			}
-			.animation(
-				.spring(response: 0.35, dampingFraction: 0.8),
-				value: vm.mode
-			)
-			.frame(maxWidth: .infinity, maxHeight: .infinity)
-			.contentShape(Rectangle())
-			.onTapGesture { isViewFocused = true }
-			.padding(.horizontal, 12)
-			.padding(.bottom, 10)
-			.zIndex(0)
-
-			// MARK: Bottom Pane
-			if runListEditMode == .inactive {
-				VStack(spacing: 0) {
-					if vm.mode == .run {
-						RunInputArea(vm: vm, editMode: $runListEditMode)
-							.padding(.horizontal, 12)
-							.padding(.bottom, runInputPadBottom)
-					}
-					KeypadView(vm: vm, width: width)
-						.padding(.bottom, keypadPadBottom)
-				}
-				.background(Color.black)
-				.transition(.move(edge: .bottom))
-				.zIndex(1)
-			}
-		}
-		.frame(width: width)
-		.animation(.easeInOut(duration: 0.35), value: runListEditMode)
-		.safeAreaInset(edge: .top) {
-			AppHeader(vm: vm, runListEditMode: $runListEditMode, isPad: false)
-				.padding(.top, 0)
-				.padding(.bottom, headerPadBottom)
-				.background(Color.black)
-				.zIndex(20)
 		}
 	}
 
@@ -417,6 +283,170 @@ extension ContentView {
 			return .handled
 		}
 		return .ignored
+	}
+}
+
+// MARK: - IPAD LAYOUT
+
+private struct IpadLayout: View {
+	var vm: AppViewModel
+	@Binding var runListEditMode: EditMode
+	@FocusState.Binding var isViewFocused: Bool
+	let width: CGFloat
+	let height: CGFloat
+
+	var body: some View {
+		let contentWidth = width - AppTheme.sidebarTotalWidth
+		let leftPaneWidth = (contentWidth * 0.60) + AppTheme.sidebarLeadingPad
+		let rightPaneWidth = (contentWidth * 0.40) - AppTheme.sidebarLeadingPad
+
+		HStack(spacing: 0) {
+			AppSidebar(vm: vm)
+			Rectangle().fill(Color(UIColor.systemGray6)).frame(width: 1)
+				.opacity(0.15)
+
+			HStack(spacing: 0) {
+
+				// MARK: Left Pane
+				ZStack {
+					Color.black.ignoresSafeArea()
+					VStack {
+						Group {
+							if vm.mode == .calc {
+								CalculatorView(vm: vm).transition(.slideAndFade)
+							} else if vm.mode == .run {
+								RunView(vm: vm, editMode: $runListEditMode)
+									.transition(.slideAndFade)
+							} else {
+								ConverterView(vm: vm).transition(.slideAndFade)
+							}
+						}
+					}
+					.frame(maxWidth: min(800, leftPaneWidth - 40))
+					.padding(.top, 30)
+					.padding(.bottom, 50)
+					.padding(.horizontal, 24)
+				}
+				.frame(width: leftPaneWidth, height: height)
+				.contentShape(Rectangle())
+				// onTapGesture kept: this refocuses the hardware-keyboard
+				// FocusState when the user taps anywhere on the layout.
+				// Wrapping the ZStack in a Button would consume taps from
+				// CalcButton/context menus inside CalculatorView etc.
+				.onTapGesture { isViewFocused = true }
+				.animation(
+					.spring(response: 0.35, dampingFraction: 0.8),
+					value: vm.mode
+				)
+
+				Rectangle().fill(Color(UIColor.systemGray6)).frame(width: 1)
+					.opacity(0.15)
+
+				// MARK: Right Pane
+				VStack(spacing: 0) {
+					AppHeader(
+						vm: vm,
+						runListEditMode: $runListEditMode,
+						isPad: true
+					)
+					.padding(.vertical, 30).padding(.horizontal, 30)
+					.zIndex(10)
+					Spacer()
+					if vm.mode == .run {
+						RunInputArea(vm: vm, editMode: $runListEditMode)
+							.padding(.bottom, 30).padding(.horizontal, 30)
+							.transition(
+								.move(edge: .bottom).combined(with: .opacity)
+							)
+					}
+					let keypadW = min(rightPaneWidth, 420)
+					KeypadView(vm: vm, width: keypadW)
+						.frame(width: keypadW).padding(.bottom, 50)
+				}
+				.frame(width: rightPaneWidth, height: height)
+				.background(Color.black)
+			}
+		}
+	}
+}
+
+// MARK: - IPHONE LAYOUT
+
+private struct IphoneLayout: View {
+	var vm: AppViewModel
+	@Binding var runListEditMode: EditMode
+	@FocusState.Binding var isViewFocused: Bool
+	let width: CGFloat
+	let height: CGFloat
+
+	var body: some View {
+		let runInputPadBottom = AppTheme.scaled(
+			compact: 6,
+			regular: 10,
+			forHeight: height
+		)
+		let keypadPadBottom = AppTheme.scaled(
+			compact: 10,
+			regular: 20,
+			forHeight: height
+		)
+		let headerPadBottom = AppTheme.scaled(
+			compact: 0,
+			regular: 8,
+			forHeight: height
+		)
+
+		VStack(spacing: 0) {
+
+			// MARK: Top Pane
+			ZStack {
+				if vm.mode == .calc {
+					CalculatorView(vm: vm).transition(.slideAndFade)
+				} else if vm.mode == .run {
+					RunView(vm: vm, editMode: $runListEditMode).transition(
+						.slideAndFade
+					)
+				} else {
+					ConverterView(vm: vm).transition(.slideAndFade)
+				}
+			}
+			.animation(
+				.spring(response: 0.35, dampingFraction: 0.8),
+				value: vm.mode
+			)
+			.frame(maxWidth: .infinity, maxHeight: .infinity)
+			.contentShape(Rectangle())
+			// onTapGesture kept: see the iPad layout comment — same reason.
+			.onTapGesture { isViewFocused = true }
+			.padding(.horizontal, 12)
+			.padding(.bottom, 10)
+			.zIndex(0)
+
+			// MARK: Bottom Pane
+			if runListEditMode == .inactive {
+				VStack(spacing: 0) {
+					if vm.mode == .run {
+						RunInputArea(vm: vm, editMode: $runListEditMode)
+							.padding(.horizontal, 12)
+							.padding(.bottom, runInputPadBottom)
+					}
+					KeypadView(vm: vm, width: width)
+						.padding(.bottom, keypadPadBottom)
+				}
+				.background(Color.black)
+				.transition(.move(edge: .bottom))
+				.zIndex(1)
+			}
+		}
+		.frame(width: width)
+		.animation(.easeInOut(duration: 0.35), value: runListEditMode)
+		.safeAreaInset(edge: .top) {
+			AppHeader(vm: vm, runListEditMode: $runListEditMode, isPad: false)
+				.padding(.top, 0)
+				.padding(.bottom, headerPadBottom)
+				.background(Color.black)
+				.zIndex(20)
+		}
 	}
 }
 

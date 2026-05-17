@@ -92,7 +92,10 @@ struct WelcomeView: View {
 		// MARK: Button
 		.safeAreaInset(edge: .bottom) {
 			VStack {
-				continueButton
+				WelcomeContinueButton(
+					onContinue: onContinue,
+					continueTrigger: $continueTrigger
+				)
 			}
 			.padding(.horizontal, 24)
 			.padding(.top, 24)
@@ -101,11 +104,15 @@ struct WelcomeView: View {
 		}
 		.sensoryFeedback(.impact(weight: .medium), trigger: continueTrigger)
 	}
+}
 
-	// MARK: - CONTINUE BUTTON
+// MARK: - CONTINUE BUTTON
 
-	@ViewBuilder
-	private var continueButton: some View {
+private struct WelcomeContinueButton: View {
+	let onContinue: () -> Void
+	@Binding var continueTrigger: Bool
+
+	var body: some View {
 		let baseButton = Button(action: {
 			continueTrigger.toggle()
 			onContinue()
