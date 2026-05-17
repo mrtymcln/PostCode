@@ -6,7 +6,7 @@ import Testing
 //
 // Covers B3 (paste should pushUndo so the user can back out of an
 // overwrite via Cmd-Z) and B4 (pastes that don't round-trip through
-// inputToFrames → framesToString should be rejected with an error
+// inputToFrames → TimecodeFormatStyle should be rejected with an error
 // shake, rather than silently applying as a different value).
 
 @Suite("AppViewModel — Paste")
@@ -139,7 +139,7 @@ struct AppViewModelPasteTests {
 		let shakeBefore = vm.errorShakeTrigger
 
 		// Minutes=99 is parseable digit-wise but doesn't round-trip:
-		// inputToFrames → framesToString rolls minutes into hours.
+		// inputToFrames → TimecodeFormatStyle rolls minutes into hours.
 		vm.processPastedText("00:99:00:00")
 
 		#expect(vm.errorShakeTrigger == shakeBefore + 1)

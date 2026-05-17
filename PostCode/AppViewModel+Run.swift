@@ -10,10 +10,7 @@ extension AppViewModel {
 	var runTotalString: String {
 		let totalFrames = runList.reduce(0) { $0 + $1.durationFrames }
 		if isFramesMode { return "\(totalFrames)" }
-		return TimecodeCalculator.framesToString(
-			totalFrames: totalFrames,
-			fps: runFrameRate
-		)
+		return totalFrames.formatted(.timecode(at: runFrameRate))
 	}
 
 	/// Real-time duration string for NTSC non-drop rates.
@@ -132,28 +129,19 @@ extension AppViewModel {
 	/// Formats a segment's In point for display.
 	func segmentInString(_ segment: Segment) -> String {
 		if isFramesMode { return "\(segment.inFrames)" }
-		return TimecodeCalculator.framesToString(
-			totalFrames: segment.inFrames,
-			fps: runFrameRate
-		)
+		return segment.inFrames.formatted(.timecode(at: runFrameRate))
 	}
 
 	/// Formats a segment's Out point for display.
 	func segmentOutString(_ segment: Segment) -> String {
 		if isFramesMode { return "\(segment.outFrames)" }
-		return TimecodeCalculator.framesToString(
-			totalFrames: segment.outFrames,
-			fps: runFrameRate
-		)
+		return segment.outFrames.formatted(.timecode(at: runFrameRate))
 	}
 
 	/// Formats a segment's duration for display.
 	func segmentDurationString(_ segment: Segment) -> String {
 		if isFramesMode { return "\(segment.durationFrames)" }
-		return TimecodeCalculator.framesToString(
-			totalFrames: segment.durationFrames,
-			fps: runFrameRate
-		)
+		return segment.durationFrames.formatted(.timecode(at: runFrameRate))
 	}
 
 	// MARK: - CSV EXPORT
@@ -181,10 +169,7 @@ extension AppViewModel {
 			let totalString =
 				isFramesMode
 				? "\(cumulativeFrames)"
-				: TimecodeCalculator.framesToString(
-					totalFrames: cumulativeFrames,
-					fps: runFrameRate
-				)
+				: cumulativeFrames.formatted(.timecode(at: runFrameRate))
 			let row =
 				"\(index + 1),\(inStr),\(outStr),\(durStr),\(totalString)\n"
 			csvString.append(row)

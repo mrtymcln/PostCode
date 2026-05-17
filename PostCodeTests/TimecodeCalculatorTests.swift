@@ -1,21 +1,28 @@
 import Testing
 
 @testable import PostCode
+import Foundation
 
-// MARK: - TIMECODE CALCULATOR TESTS
+// MARK: - TIMECODE TESTS
 //
-// Pure-function tests for TimecodeCalculator. No app state, no async,
-// no SwiftUI — just frame counts in, strings out.
+// Pure-function tests for the timecode formatter and parser.
+// No app state, no async, no SwiftUI — just frame counts in,
+// strings out (and vice versa).
+//
+// `frames.formatted(.timecode(at: rate))` is the canonical way to
+// render a frame count as a SMPTE timecode display string.
+// `TimecodeCalculator.inputToFrames` parses keypad digit strings
+// back into frame counts.
 //
 // The most important assertion is the round-trip:
-//     framesToString(N) → s,  inputToFrames(s) → N    for all valid N.
-// Drop-frame boundary tests use concrete frame numbers calculated
-// against the SMPTE standard.
+//     N.formatted(.timecode(at: r)) → s,  inputToFrames(s) → N
+// for all valid N. Drop-frame boundary tests use concrete frame
+// numbers calculated against the SMPTE standard.
 
-@Suite("TimecodeCalculator")
+@Suite("Timecode")
 struct TimecodeCalculatorTests {
 
-	// MARK: - framesToString — Standard rates
+	// MARK: - Frames → String — Standard rates
 
 	@Test("Zero frames renders as 00:00:00:00 (or ;00) for every standard rate")
 	func zeroFrames() {
@@ -23,8 +30,7 @@ struct TimecodeCalculatorTests {
 			let expected =
 				rate.isDropFrame ? "00:00:00;00" : "00:00:00:00"
 			#expect(
-				TimecodeCalculator.framesToString(totalFrames: 0, fps: rate)
-					== expected,
+				(0).formatted(.timecode(at: rate)) == expected,
 				"\(rate.id) failed zero render"
 			)
 		}
@@ -42,52 +48,41 @@ struct TimecodeCalculatorTests {
 	)
 	func oneSecondStandardRates(rate: FrameRate, frames: Int) {
 		#expect(
-			TimecodeCalculator.framesToString(totalFrames: frames, fps: rate)
-				== "00:00:01:00"
+			frames.formatted(.timecode(at: rate)) == "00:00:01:00"
 		)
 	}
 
 	@Test("One hour renders correctly")
 	func oneHour() {
 		#expect(
-			TimecodeCalculator.framesToString(
-				totalFrames: 25 * 3600, fps: .fps25
-			) == "01:00:00:00"
+			(25 * 3600).formatted(.timecode(at: .fps25)) == "01:00:00:00"
 		)
 		#expect(
-			TimecodeCalculator.framesToString(
-				totalFrames: 24 * 3600, fps: .fps24
-			) == "01:00:00:00"
+			(24 * 3600).formatted(.timecode(at: .fps24)) == "01:00:00:00"
 		)
 	}
 
 	@Test("Negative frame counts render with leading minus")
 	func negativeFrames() {
 		#expect(
-			TimecodeCalculator.framesToString(totalFrames: -25, fps: .fps25)
-				== "-00:00:01:00"
+			(-25).formatted(.timecode(at: .fps25)) == "-00:00:01:00"
 		)
 		#expect(
-			TimecodeCalculator.framesToString(totalFrames: -1, fps: .fps25)
-				== "-00:00:00:01"
+			(-1).formatted(.timecode(at: .fps25)) == "-00:00:00:01"
 		)
 	}
 
-	// MARK: - framesToString — Drop frame boundaries
+	// MARK: - Drop frame boundaries
 
 	@Test("29.97 DF — drops two frames at minute boundary")
 	func dropFrame2997MinuteBoundary() {
 		// Last frame of minute 0 — no drop has happened yet
 		#expect(
-			TimecodeCalculator.framesToString(
-				totalFrames: 1799, fps: .fps2997Drop
-			) == "00:00:59;29"
+			(1799).formatted(.timecode(at: .fps2997Drop)) == "00:00:59;29"
 		)
 		// First frame of minute 1 — display jumps from ;29 to ;02
 		#expect(
-			TimecodeCalculator.framesToString(
-				totalFrames: 1800, fps: .fps2997Drop
-			) == "00:01:00;02"
+			(1800).formatted(.timecode(at: .fps2997Drop)) == "00:01:00;02"
 		)
 	}
 
@@ -96,23 +91,17 @@ struct TimecodeCalculatorTests {
 		// 10 minutes at 30fps = 18000 nominal − 9 drop events × 2
 		// frames each = 17982 absolute frames.
 		#expect(
-			TimecodeCalculator.framesToString(
-				totalFrames: 17982, fps: .fps2997Drop
-			) == "00:10:00;00"
+			(17982).formatted(.timecode(at: .fps2997Drop)) == "00:10:00;00"
 		)
 	}
 
 	@Test("59.94 DF — drops four frames at minute boundary")
 	func dropFrame5994MinuteBoundary() {
 		#expect(
-			TimecodeCalculator.framesToString(
-				totalFrames: 3599, fps: .fps5994Drop
-			) == "00:00:59;59"
+			(3599).formatted(.timecode(at: .fps5994Drop)) == "00:00:59;59"
 		)
 		#expect(
-			TimecodeCalculator.framesToString(
-				totalFrames: 3600, fps: .fps5994Drop
-			) == "00:01:00;04"
+			(3600).formatted(.timecode(at: .fps5994Drop)) == "00:01:00;04"
 		)
 	}
 
@@ -120,20 +109,18 @@ struct TimecodeCalculatorTests {
 	func dropFrame5994TenthMinute() {
 		// 10 minutes at 60fps = 36000 nominal − 9 × 4 = 35964 absolute.
 		#expect(
-			TimecodeCalculator.framesToString(
-				totalFrames: 35964, fps: .fps5994Drop
-			) == "00:10:00;00"
+			(35964).formatted(.timecode(at: .fps5994Drop)) == "00:10:00;00"
 		)
 	}
 
 	// MARK: - Round-trip
 	//
-	// framesToString → strip separators → inputToFrames must return
-	// the original frame count, for every valid frame value across
-	// every standard rate.
+	// formatted(.timecode(at:)) → strip separators → inputToFrames
+	// must return the original frame count, for every valid frame
+	// value across every standard rate.
 
 	@Test(
-		"framesToString and inputToFrames round-trip for standard rates",
+		"timecode FormatStyle and inputToFrames round-trip for standard rates",
 		arguments: [
 			FrameRate.fps23976,
 			.fps24,
@@ -152,9 +139,7 @@ struct TimecodeCalculatorTests {
 		// separately above; here we stay clear of skipped numbers.
 		let testCases = [0, 1, 24, 100, 1500, 50_000]
 		for frames in testCases {
-			let str = TimecodeCalculator.framesToString(
-				totalFrames: frames, fps: rate
-			)
+			let str = frames.formatted(.timecode(at: rate))
 			let stripped = str.replacing(":", with: "").replacing(
 				";", with: ""
 			)
@@ -170,9 +155,7 @@ struct TimecodeCalculatorTests {
 
 	@Test("Negative round-trip preserves sign")
 	func roundTripNegative() {
-		let str = TimecodeCalculator.framesToString(
-			totalFrames: -1500, fps: .fps25
-		)
+		let str = (-1500).formatted(.timecode(at: .fps25))
 		let stripped = str.replacing(":", with: "").replacing(";", with: "")
 		let parsed = TimecodeCalculator.inputToFrames(
 			input: stripped, fps: .fps25
@@ -244,6 +227,16 @@ struct TimecodeCalculatorTests {
 		#expect(
 			TimecodeCalculator.formatInput("-100", fps: .fps25)
 				== "-00:00:01:00"
+		)
+	}
+
+	// MARK: - Custom rate frame digits
+
+	@Test("Custom rate above 99fps uses 3 frame digits")
+	func customRateThreeDigitFrames() {
+		// 120fps at frame 119 is "00:00:00:119" (3-digit frames)
+		#expect(
+			(119).formatted(.timecode(at: .custom(120))) == "00:00:00:119"
 		)
 	}
 }

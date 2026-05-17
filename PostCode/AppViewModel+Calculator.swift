@@ -226,10 +226,7 @@ extension AppViewModel {
 	func recallResult() {
 		guard lastWasEquals else { return }
 		let framesToRecall = accumulatedFrames
-		let tcString = TimecodeCalculator.framesToString(
-			totalFrames: framesToRecall,
-			fps: calcFrameRate
-		)
+		let tcString = framesToRecall.formatted(.timecode(at: calcFrameRate))
 
 		// Convert the TC string back to raw digits for the input field.
 		var cleanString = tcString

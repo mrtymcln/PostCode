@@ -15,70 +15,9 @@ import Foundation
 
 nonisolated struct TimecodeCalculator {
 
-	// MARK: - Frames → Timecode String
-	/// Converts an integer frame count into a SMPTE timecode display string.
-	///
-	/// For non-drop rates this is straightforward positional arithmetic:
-	///   `totalFrames = (HH × 3600 + MM × 60 + SS) × baseFPS + FF`
-	///
-	/// For drop-frame rates (29.97 DF, 59.94 DF) the standard SMPTE
-	/// algorithm is applied: frame numbers are skipped at the start of
-	/// every minute except every 10th minute, so the displayed timecode
-	/// stays aligned with 'wall clock' time. No actual frames are dropped —
-	/// only the numbering changes.
-	///
-	/// Negative frame counts produce a leading minus sign (e.g. "-00:00:01:00")
-	/// to support pre-roll calculations.
-	///
-	/// - Parameters:
-	///   - totalFrames: Signed integer frame count (negative = pre-roll).
-	///   - fps: The frame rate determining base FPS, separator, and drop logic.
-	/// - Returns: Formatted timecode string, e.g. "01:02:03:04" or "01:02:03;04".
-	static func framesToString(totalFrames: Int, fps: FrameRate) -> String {
-		let isNegative = totalFrames < 0
-		var frames = abs(totalFrames)
-		let base = fps.baseFPS
-		guard base > 0 else { return "00:00:00:00" }
-
-		// MARK: Drop-Frame Adjustment
-		// The SMPTE drop-frame algorithm works by first computing which
-		// 10-minute block (D) and offset within that block (M) the frame
-		// falls in, then adding back the 'dropped' frame numbers so that
-		// the positional decomposition below produces the correct display.
-		if fps.isDropFrame {
-			let dropFrames = fps.dropFrameCount
-			let framesPerMin = base * 60
-			let framesPer10Min = framesPerMin * 10
-
-			let framesPer10MinDrop = framesPer10Min - (9 * dropFrames)
-
-			let D = frames / framesPer10MinDrop
-			let M = frames % framesPer10MinDrop
-
-			if M > dropFrames {
-				frames +=
-					(dropFrames * 9 * D) + dropFrames
-					* ((M - dropFrames) / (framesPerMin - dropFrames))
-			} else {
-				frames += dropFrames * 9 * D
-			}
-		}
-
-		// MARK: Positional Decomposition
-		// Standard base conversion: extract frames, seconds, minutes, hours
-		// from the (adjusted) total frame count.
-		let f = frames % base
-		let totalSeconds = frames / base
-		let s = totalSeconds % 60
-		let m = (totalSeconds / 60) % 60
-		let h = totalSeconds / 3600
-
-		let frameFormat = fps.frameDigits == 3 ? "%03d" : "%02d"
-		let formatString = "%02d:%02d:%02d%@\(frameFormat)"
-		let timeString = String(format: formatString, h, m, s, fps.separator, f)
-
-		return isNegative ? "-\(timeString)" : timeString
-	}
+	// Note: rendering a frame count as a SMPTE timecode string is now
+	// done via `TimecodeFormatStyle` (see below in this file).
+	// Use `frames.formatted(.timecode(at: rate))` at call sites.
 
 	// MARK: - Input String → Frames
 	/// Converts a raw digit string (as typed on the keypad) into a frame count.
@@ -117,8 +56,8 @@ nonisolated struct TimecodeCalculator {
 		var totalFrames = (h * 3600 + m * 60 + s) * fps.baseFPS + f
 
 		// MARK: Drop-Frame Subtraction
-		// Reverse of the addition in framesToString: subtract the frame
-		// numbers that would have been skipped up to this timecode position.
+		// Reverse of the addition in `TimecodeFormatStyle`: subtract the
+		// frame numbers that would have been skipped up to this position.
 		if fps.isDropFrame {
 			let totalMinutes = h * 60 + m
 			let drops = fps.dropFrameCount
@@ -153,9 +92,10 @@ nonisolated struct TimecodeCalculator {
 	// MARK: - Live Input Formatting
 	/// Formats a raw digit string into a timecode display for live preview.
 	///
-	/// Unlike `framesToString`, this function does not validate — the user
-	/// may be mid-entry with an incomplete or invalid timecode. It simply
-	/// right-aligns the digits into HH:MM:SS:FF positions with the separators.
+	/// Unlike `TimecodeFormatStyle`, this function does not validate —
+	/// the user may be mid-entry with an incomplete or invalid timecode.
+	/// It simply right-aligns the digits into HH:MM:SS:FF positions with
+	/// the separators.
 	///
 	/// Example: "12345" at 25fps becomes "00:01:23:45"
 	///
@@ -182,6 +122,91 @@ nonisolated struct TimecodeCalculator {
 			"\(digits[0])\(digits[1]):\(digits[2])\(digits[3]):\(digits[4])\(digits[5])\(frameSep)\(String(digits[6..<(6 + fDigits)]))"
 
 		return isNegative ? "-" + text : text
+	}
+}
+
+// MARK: - TIMECODE FORMAT STYLE
+//
+// Renders an integer frame count as a SMPTE timecode display string at
+// a given `FrameRate`.
+//
+// For non-drop rates this is straightforward positional arithmetic:
+//   `totalFrames = (HH × 3600 + MM × 60 + SS) × baseFPS + FF`
+//
+// For drop-frame rates (29.97 DF, 59.94 DF) the standard SMPTE algorithm
+// is applied: frame numbers are skipped at the start of every minute
+// except every 10th minute, so the displayed timecode stays aligned with
+// 'wall clock' time. No actual frames are dropped — only the numbering.
+//
+// Negative frame counts produce a leading minus sign (e.g. "-00:00:01:00")
+// to support pre-roll calculations.
+//
+// Use at any call site:
+//     let str = frames.formatted(.timecode(at: rate))
+//
+// Or directly in SwiftUI for type-safe formatting:
+//     Text(frames, format: .timecode(at: rate))
+
+nonisolated struct TimecodeFormatStyle: FormatStyle {
+	let fps: FrameRate
+
+	func format(_ value: Int) -> String {
+		let isNegative = value < 0
+		var frames = abs(value)
+		let base = fps.baseFPS
+		guard base > 0 else { return "00:00:00:00" }
+
+		// MARK: Drop-Frame Adjustment
+		// The SMPTE drop-frame algorithm works by first computing which
+		// 10-minute block (D) and offset within that block (M) the frame
+		// falls in, then adding back the 'dropped' frame numbers so that
+		// the positional decomposition below produces the correct display.
+		if fps.isDropFrame {
+			let dropFrames = fps.dropFrameCount
+			let framesPerMin = base * 60
+			let framesPer10Min = framesPerMin * 10
+			let framesPer10MinDrop = framesPer10Min - (9 * dropFrames)
+
+			let D = frames / framesPer10MinDrop
+			let M = frames % framesPer10MinDrop
+
+			if M > dropFrames {
+				frames +=
+					(dropFrames * 9 * D) + dropFrames
+					* ((M - dropFrames) / (framesPerMin - dropFrames))
+			} else {
+				frames += dropFrames * 9 * D
+			}
+		}
+
+		// MARK: Positional Decomposition
+		let f = frames % base
+		let totalSeconds = frames / base
+		let s = totalSeconds % 60
+		let m = (totalSeconds / 60) % 60
+		let h = totalSeconds / 3600
+
+		// MARK: Zero-Padded Assembly
+		// `String.leftPadding(toLength:with:)` replaces the previous
+		// `String(format: "%02d…")` pattern. The frame digit count is
+		// variable (2 for standard rates, 3 for custom rates above 99fps).
+		let hPart = String(h).leftPadding(toLength: 2, with: "0")
+		let mPart = String(m).leftPadding(toLength: 2, with: "0")
+		let sPart = String(s).leftPadding(toLength: 2, with: "0")
+		let fPart = String(f)
+			.leftPadding(toLength: fps.frameDigits, with: "0")
+
+		let timeString = "\(hPart):\(mPart):\(sPart)\(fps.separator)\(fPart)"
+		return isNegative ? "-\(timeString)" : timeString
+	}
+}
+
+extension FormatStyle where Self == TimecodeFormatStyle {
+	/// Renders an integer frame count as a SMPTE timecode display
+	/// string at the given frame rate (drop-frame aware).
+	nonisolated static func timecode(at fps: FrameRate) -> TimecodeFormatStyle
+	{
+		TimecodeFormatStyle(fps: fps)
 	}
 }
 

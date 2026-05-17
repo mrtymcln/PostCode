@@ -47,9 +47,6 @@ extension AppViewModel {
 		// MARK: Format Output
 		return isFramesMode
 			? "\(finalFrames)"
-			: TimecodeCalculator.framesToString(
-				totalFrames: finalFrames,
-				fps: convDestRate
-			)
+			: finalFrames.formatted(.timecode(at: convDestRate))
 	}
 }

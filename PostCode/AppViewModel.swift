@@ -185,10 +185,7 @@ class AppViewModel {
 					let val =
 						isFramesMode
 						? "\(frames)"
-						: TimecodeCalculator.framesToString(
-							totalFrames: frames,
-							fps: calcFrameRate
-						)
+						: frames.formatted(.timecode(at: calcFrameRate))
 					return isAns ? "  (Ans) -> \(val)" : "  \(val)"
 				case .operatorSymbol(let op):
 					let s = op.symbol
@@ -197,10 +194,7 @@ class AppViewModel {
 					let val =
 						isFramesMode
 						? "\(frames)"
-						: TimecodeCalculator.framesToString(
-							totalFrames: frames,
-							fps: calcFrameRate
-						)
+						: frames.formatted(.timecode(at: calcFrameRate))
 					return "= \(val)"
 				case .separator:
 					return "----------------"
@@ -421,10 +415,7 @@ class AppViewModel {
 			if lastWasEquals || inputString.isEmpty {
 				return isFramesMode
 					? "\(accumulatedFrames)"
-					: TimecodeCalculator.framesToString(
-						totalFrames: accumulatedFrames,
-						fps: calcFrameRate
-					)
+					: accumulatedFrames.formatted(.timecode(at: calcFrameRate))
 			} else {
 				return getFormattedActiveDisplay()
 			}
@@ -463,7 +454,7 @@ class AppViewModel {
 			}
 			if let parsed = parseStructuredTimecode(string, fps: fps) {
 				// Reject pastes that don't round-trip through
-				// inputToFrames → framesToString. Drop-frame timecodes
+				// inputToFrames → TimecodeFormatStyle. Drop-frame timecodes
 				// like "00:01:00;00" at 29.97 DF parse to a frame count
 				// that displays as a DIFFERENT timecode — silently
 				// changing the user's value. Better to shake and let
@@ -526,7 +517,7 @@ class AppViewModel {
 	}
 
 	/// Checks whether a parsed timecode survives the round trip
-	/// `inputToFrames → framesToString → strip separators → strip leading zeros`
+	/// `inputToFrames → TimecodeFormatStyle → strip separators → strip leading zeros`
 	/// without changing value. Catches drop-frame skipped frame numbers
 	/// and other invalid TC inputs that would otherwise apply silently
 	/// as a different value than the user pasted.
@@ -535,9 +526,7 @@ class AppViewModel {
 		let frames = TimecodeCalculator.inputToFrames(
 			input: parsed, fps: fps
 		)
-		let canonical = TimecodeCalculator.framesToString(
-			totalFrames: frames, fps: fps
-		)
+		let canonical = frames.formatted(.timecode(at: fps))
 		let canonicalDigits =
 			canonical
 			.replacing("-", with: "")
@@ -642,7 +631,7 @@ class AppViewModel {
 	/// Converts a frame count string back to raw TC digits (e.g. "250" > "10000").
 	private func toTcString(_ input: String, fps: FrameRate) -> String {
 		guard let fc = Int(input) else { return input }
-		let tc = TimecodeCalculator.framesToString(totalFrames: fc, fps: fps)
+		let tc = fc.formatted(.timecode(at: fps))
 		let raw = tc.replacing(":", with: "")
 			.replacing(";", with: "")
 		if let val = Int(raw) { return "\(val)" }
