@@ -120,17 +120,8 @@ struct AppCommands: Commands {
 			}
 			.keyboardShortcut("=", modifiers: [])
 
-			/// Return key is overloaded: equals in calc, add segment in run.
-			/// Hidden from the menu since "Equals" already covers the label.
-			Button("") {
-				if vm.mode == .calc {
-					vm.calculateResult()
-				} else if vm.mode == .run {
-					withAnimation { vm.addSegment() }
-				}
-			}
-			.keyboardShortcut(.return, modifiers: [])
-			.hidden()
+			// Return key (equals in calc, add segment in run) is handled
+			// by `ContentView.handleHardwareKey`, not the menu.
 
 			Button("Recall Answer") {
 				if vm.mode == .calc { vm.recallResult() }

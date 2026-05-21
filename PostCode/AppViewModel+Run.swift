@@ -9,8 +9,7 @@ extension AppViewModel {
 	/// Sums all segment durations via reduce, then formats the total at the current frame rate.
 	var runTotalString: String {
 		let totalFrames = runList.reduce(0) { $0 + $1.durationFrames }
-		if isFramesMode { return "\(totalFrames)" }
-		return totalFrames.formatted(.timecode(at: runFrameRate))
+		return displayString(forFrames: totalFrames, fps: runFrameRate)
 	}
 
 	/// Real-time duration string for NTSC non-drop rates.
@@ -55,22 +54,8 @@ extension AppViewModel {
 	///
 	/// On success, clears both input fields and resets focus to the In point.
 	func addSegment() {
-		let inFrames: Int
-		let outFrames: Int
-
-		if isFramesMode {
-			inFrames = Int(runInString) ?? 0
-			outFrames = Int(runOutString) ?? 0
-		} else {
-			inFrames = TimecodeCalculator.inputToFrames(
-				input: runInString,
-				fps: runFrameRate
-			)
-			outFrames = TimecodeCalculator.inputToFrames(
-				input: runOutString,
-				fps: runFrameRate
-			)
-		}
+		let inFrames = framesFromInput(runInString, fps: runFrameRate)
+		let outFrames = framesFromInput(runOutString, fps: runFrameRate)
 
 		let entry = Segment(
 			id: UUID(),
@@ -128,20 +113,17 @@ extension AppViewModel {
 
 	/// Formats a segment's In point for display.
 	func segmentInString(_ segment: Segment) -> String {
-		if isFramesMode { return "\(segment.inFrames)" }
-		return segment.inFrames.formatted(.timecode(at: runFrameRate))
+		displayString(forFrames: segment.inFrames, fps: runFrameRate)
 	}
 
 	/// Formats a segment's Out point for display.
 	func segmentOutString(_ segment: Segment) -> String {
-		if isFramesMode { return "\(segment.outFrames)" }
-		return segment.outFrames.formatted(.timecode(at: runFrameRate))
+		displayString(forFrames: segment.outFrames, fps: runFrameRate)
 	}
 
 	/// Formats a segment's duration for display.
 	func segmentDurationString(_ segment: Segment) -> String {
-		if isFramesMode { return "\(segment.durationFrames)" }
-		return segment.durationFrames.formatted(.timecode(at: runFrameRate))
+		displayString(forFrames: segment.durationFrames, fps: runFrameRate)
 	}
 
 	// MARK: - CSV EXPORT
@@ -166,10 +148,9 @@ extension AppViewModel {
 			let inStr = segmentInString(item)
 			let outStr = segmentOutString(item)
 			let durStr = segmentDurationString(item)
-			let totalString =
-				isFramesMode
-				? "\(cumulativeFrames)"
-				: cumulativeFrames.formatted(.timecode(at: runFrameRate))
+			let totalString = displayString(
+				forFrames: cumulativeFrames, fps: runFrameRate
+			)
 			let row =
 				"\(index + 1),\(inStr),\(outStr),\(durStr),\(totalString)\n"
 			csvString.append(row)

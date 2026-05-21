@@ -11,17 +11,9 @@ extension AppViewModel {
 		if convSourceRate == convDestRate { return getFormattedConvInput() }
 
 		// MARK: Parse Source Frames
-		let srcFrames: Double
-		if isFramesMode {
-			srcFrames = Double(Int(convInputString) ?? 0)
-		} else {
-			srcFrames = Double(
-				TimecodeCalculator.inputToFrames(
-					input: convInputString,
-					fps: convSourceRate
-				)
-			)
-		}
+		let srcFrames = Double(
+			framesFromInput(convInputString, fps: convSourceRate)
+		)
 
 		// MARK: Build Conversion Terms
 		let srcBase = Double(convSourceRate.baseFPS)
@@ -45,8 +37,6 @@ extension AppViewModel {
 		let finalFrames = Int(round(exactFrames))
 
 		// MARK: Format Output
-		return isFramesMode
-			? "\(finalFrames)"
-			: finalFrames.formatted(.timecode(at: convDestRate))
+		return displayString(forFrames: finalFrames, fps: convDestRate)
 	}
 }

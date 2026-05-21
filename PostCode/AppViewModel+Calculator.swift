@@ -105,13 +105,7 @@ extension AppViewModel {
 	/// After recording, the input field is cleared for the next operand.
 	func setOperation(_ op: CalcOperation) {
 		lastWasEquals = false
-		let currentFrames =
-			isFramesMode
-			? (Int(inputString) ?? 0)
-			: TimecodeCalculator.inputToFrames(
-				input: inputString,
-				fps: calcFrameRate
-			)
+		let currentFrames = framesFromInput(inputString, fps: calcFrameRate)
 
 		if accumulatedFrames == 0 && pendingOperation == .none {
 			// First operand — just record it.
@@ -159,13 +153,7 @@ extension AppViewModel {
 		guard pendingOperation != .none else { return }
 		if inputString.isEmpty && !lastWasEquals { return }
 		pushUndo(label: "calculation")
-		let currentFrames =
-			isFramesMode
-			? (Int(inputString) ?? 0)
-			: TimecodeCalculator.inputToFrames(
-				input: inputString,
-				fps: calcFrameRate
-			)
+		let currentFrames = framesFromInput(inputString, fps: calcFrameRate)
 
 		// Division by zero guard
 		if pendingOperation == .divide && currentFrames == 0 {

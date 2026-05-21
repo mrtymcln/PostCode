@@ -164,106 +164,117 @@ struct ContentView: View {
 
 	func handleHardwareKey(_ press: KeyPress) -> KeyPress.Result {
 		let char = press.characters
+		let mods = press.modifiers
 
-		// MARK: Command Shortcuts
-		if press.modifiers.contains(.command) {
-			if char == "1" {
+		// MARK: Cmd+digit — mode switch (any mode)
+		if mods.contains(.command) {
+			switch char {
+			case "1":
 				withAnimation { vm.mode = .calc }
 				return .handled
-			}
-			if char == "2" {
+			case "2":
 				withAnimation { vm.mode = .run }
 				return .handled
-			}
-			if char == "3" {
+			case "3":
 				withAnimation { vm.mode = .conv }
 				return .handled
+			default: break
 			}
 		}
 
-		// MARK: Option Shortcuts
-		if press.modifiers.contains(.option) && (char == "t" || char == "T") {
-			withAnimation { vm.toggleDisplayMode() }
-			return .handled
+		// MARK: Opt+letter — app actions (any mode)
+		// `ç` and `å` are the characters macOS produces for Opt-C and Opt-A.
+		if mods.contains(.option) {
+			switch char {
+			case "t", "T":
+				withAnimation { vm.toggleDisplayMode() }
+				return .handled
+			case "c", "C", "ç":
+				vm.handleTrashTap()
+				return .handled
+			case "a", "A", "å":
+				if vm.mode == .calc { vm.recallResult() }
+				return .handled
+			default: break
+			}
 		}
 
-		// Option-C to clear all (ç is the character Option-C produces on macOS)
-		if press.modifiers.contains(.option)
-			&& (char == "c" || char == "C" || char == "ç")
-		{
-			vm.handleTrashTap()
-			return .handled
-		}
-
-		// Option-A to recall answer (å is the character Option-A produces on macOS)
-		if press.modifiers.contains(.option)
-			&& (char == "a" || char == "A" || char == "å")
-		{
-			if vm.mode == .calc { vm.recallResult() }
-			return .handled
-		}
-
-		// MARK: Calculator Operators
+		// MARK: Calc mode operators
 		if vm.mode == .calc {
-			// Shift-= produces "+" on US keyboards
-			if char == "+" || (char == "=" && press.modifiers.contains(.shift))
-			{
-				vm.setOperation(.add)
-				return .handled
-			}
-			if char == "*" {
-				vm.setOperation(.multiply)
-				return .handled
-			}
-			// Option-- generates an en-dash on some keyboards
-			if press.modifiers.contains(.option) && (char == "-" || char == "–")
-			{
+			// Opt+- negates the current input
+			if mods.contains(.option) && (char == "-" || char == "–") {
 				vm.toggleNegate()
 				return .handled
 			}
-			if char == "-" {
+			switch char {
+			case "+":
+				vm.setOperation(.add)
+				return .handled
+			case "=" where mods.contains(.shift):
+				// Shift-= produces "+" on US keyboards
+				vm.setOperation(.add)
+				return .handled
+			case "*":
+				vm.setOperation(.multiply)
+				return .handled
+			case "-":
 				vm.setOperation(.subtract)
 				return .handled
-			}
-			if char == "/" {
+			case "/":
 				vm.setOperation(.divide)
 				return .handled
-			}
-			if char == "=" {
+			case "=":
 				vm.calculateResult()
 				return .handled
+			default: break
 			}
 		}
 
-		// MARK: Digits
-		// Ignore digits when Command is held
-		if "0123456789".contains(char) && !press.modifiers.contains(.shift)
-			&& !press.modifiers.contains(.command)
+		// MARK: Digits (no Shift, no Cmd)
+		if !mods.contains(.shift) && !mods.contains(.command)
+			&& "0123456789".contains(char)
 		{
 			vm.addDigit(char)
 			return .handled
 		}
 
-		// MARK: Delete
-		if press.key == .delete {
-			if press.modifiers.contains(.command) && vm.mode == .run {
+		// MARK: Special keys
+		switch press.key {
+		case .delete:
+			if mods.contains(.command) && vm.mode == .run {
 				// Cmd+Delete clears both In and Out fields
 				withAnimation {
 					vm.runInString = ""
 					vm.runOutString = ""
 					vm.activeRunField = .inPoint
 				}
-				return .handled
 			} else {
 				vm.backspace()
-				return .handled
 			}
+			return .handled
+
+		case .return:
+			if vm.mode == .calc {
+				vm.calculateResult()
+			} else if vm.mode == .run {
+				withAnimation { vm.addSegment() }
+			}
+			return .handled
+
+		case .tab where vm.mode == .run:
+			Task { @MainActor in
+				withAnimation {
+					vm.activeRunField =
+						(vm.activeRunField == .inPoint) ? .outPoint : .inPoint
+				}
+			}
+			return .handled
+
+		default: break
 		}
 
-		// MARK: Return
-		// If Calc mode: equals
-		// If Run mode: add segment
-		if press.key == .return || char == "\r" || char == "\n" {
+		// Some keyboards emit \r or \n directly instead of `.return`.
+		if char == "\r" || char == "\n" {
 			if vm.mode == .calc {
 				vm.calculateResult()
 			} else if vm.mode == .run {
@@ -272,16 +283,6 @@ struct ContentView: View {
 			return .handled
 		}
 
-		// MARK: Tab
-		if press.key == .tab && vm.mode == .run {
-			Task { @MainActor in
-				withAnimation {
-					vm.activeRunField =
-						(vm.activeRunField == .inPoint) ? .outPoint : .inPoint
-				}
-			}
-			return .handled
-		}
 		return .ignored
 	}
 }

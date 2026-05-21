@@ -68,7 +68,10 @@ nonisolated struct TimecodeCalculator {
 			totalFrames -= dropFrames
 		}
 
-		return input.contains("-") ? -totalFrames : totalFrames
+		// `hasPrefix` rather than `contains` — only a leading "-" should
+		// negate. A string like "12-34-56-78" (weird paste content) must
+		// not be misread as negative.
+		return input.hasPrefix("-") ? -totalFrames : totalFrames
 	}
 
 	// MARK: - Frames → Real Seconds

@@ -208,21 +208,10 @@ struct RunInputArea: View {
 
 	// MARK: Validation
 	private var outIsValid: Bool {
-		let inFrames: Int
-		let outFrames: Int
-		if vm.isFramesMode {
-			inFrames = Int(vm.runInString) ?? 0
-			outFrames = Int(vm.runOutString) ?? 0
-		} else {
-			inFrames = TimecodeCalculator.inputToFrames(
-				input: vm.runInString,
-				fps: vm.runFrameRate
-			)
-			outFrames = TimecodeCalculator.inputToFrames(
-				input: vm.runOutString,
-				fps: vm.runFrameRate
-			)
-		}
+		let inFrames = vm.framesFromInput(vm.runInString, fps: vm.runFrameRate)
+		let outFrames = vm.framesFromInput(
+			vm.runOutString, fps: vm.runFrameRate
+		)
 		return (outFrames - inFrames + 1) > 0
 	}
 

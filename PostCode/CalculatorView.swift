@@ -132,9 +132,7 @@ private struct CalcActiveLine: View {
 	}
 
 	private func format(_ frames: Int) -> String {
-		vm.isFramesMode
-			? "\(frames)"
-			: frames.formatted(.timecode(at: vm.calcFrameRate))
+		vm.displayString(forFrames: frames, fps: vm.calcFrameRate)
 	}
 }
 
@@ -175,9 +173,7 @@ private struct PaperTapeRow: View {
 	}
 
 	private func format(_ frames: Int) -> String {
-		vm.isFramesMode
-			? "\(frames)"
-			: frames.formatted(.timecode(at: vm.calcFrameRate))
+		vm.displayString(forFrames: frames, fps: vm.calcFrameRate)
 	}
 }
 

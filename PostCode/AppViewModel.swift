@@ -182,19 +182,17 @@ class AppViewModel {
 			let tape = paperTape.compactMap { entry -> String? in
 				switch entry.type {
 				case .input(let frames, let isAns):
-					let val =
-						isFramesMode
-						? "\(frames)"
-						: frames.formatted(.timecode(at: calcFrameRate))
+					let val = displayString(
+						forFrames: frames, fps: calcFrameRate
+					)
 					return isAns ? "  (Ans) -> \(val)" : "  \(val)"
 				case .operatorSymbol(let op):
 					let s = op.symbol
 					return s.isEmpty ? nil : s
 				case .result(let frames):
-					let val =
-						isFramesMode
-						? "\(frames)"
-						: frames.formatted(.timecode(at: calcFrameRate))
+					let val = displayString(
+						forFrames: frames, fps: calcFrameRate
+					)
 					return "= \(val)"
 				case .separator:
 					return "----------------"
@@ -289,6 +287,19 @@ class AppViewModel {
 		isFramesMode ? 12 : (6 + rate.frameDigits)
 	}
 
+	/// Appends `digits` to `field`, respecting `digitLimit(for: fps)`.
+	/// Overflow is truncated. Shared between `addDigit` (single digit
+	/// from the keypad / hardware keyboard) and `processPastedText`
+	/// (bulk insertion from paste).
+	private func appendDigits(
+		_ digits: String, to field: inout String, fps: FrameRate
+	) {
+		let limit = digitLimit(for: fps)
+		let available = limit - field.filter(\.isNumber).count
+		guard available > 0 else { return }
+		field += String(digits.prefix(available))
+	}
+
 	/// Routes a typed digit to the correct input field based on the active mode.
 	/// Enforces the digit limit and handles post-equals state in calc mode.
 	func addDigit(_ digit: String) {
@@ -302,22 +313,15 @@ class AppViewModel {
 				paperTape.append(TapeEntry(type: .separator))
 				lastWasEquals = false
 			}
-			let limit = digitLimit(for: calcFrameRate)
-			let digitCount = inputString.filter(\.isNumber).count
-			if digitCount + digit.count <= limit { inputString += digit }
+			appendDigits(digit, to: &inputString, fps: calcFrameRate)
 		case .run:
-			let limit = digitLimit(for: runFrameRate)
 			if activeRunField == .inPoint {
-				let digitCount = runInString.filter(\.isNumber).count
-				if digitCount + digit.count <= limit { runInString += digit }
+				appendDigits(digit, to: &runInString, fps: runFrameRate)
 			} else {
-				let digitCount = runOutString.filter(\.isNumber).count
-				if digitCount + digit.count <= limit { runOutString += digit }
+				appendDigits(digit, to: &runOutString, fps: runFrameRate)
 			}
 		case .conv:
-			let limit = digitLimit(for: convSourceRate)
-			let digitCount = convInputString.filter(\.isNumber).count
-			if digitCount + digit.count <= limit { convInputString += digit }
+			appendDigits(digit, to: &convInputString, fps: convSourceRate)
 		}
 	}
 
@@ -413,9 +417,9 @@ class AppViewModel {
 		switch mode {
 		case .calc:
 			if lastWasEquals || inputString.isEmpty {
-				return isFramesMode
-					? "\(accumulatedFrames)"
-					: accumulatedFrames.formatted(.timecode(at: calcFrameRate))
+				return displayString(
+					forFrames: accumulatedFrames, fps: calcFrameRate
+				)
 			} else {
 				return getFormattedActiveDisplay()
 			}
@@ -488,30 +492,15 @@ class AppViewModel {
 				paperTape.append(TapeEntry(type: .separator))
 				lastWasEquals = false
 			}
-			let limit = digitLimit(for: calcFrameRate)
-			let available = limit - inputString.filter(\.isNumber).count
-			if available > 0 {
-				inputString += String(cleaned.prefix(available))
-			}
+			appendDigits(cleaned, to: &inputString, fps: calcFrameRate)
 		case .run:
-			let limit = digitLimit(for: runFrameRate)
 			if activeRunField == .inPoint {
-				let available = limit - runInString.filter(\.isNumber).count
-				if available > 0 {
-					runInString += String(cleaned.prefix(available))
-				}
+				appendDigits(cleaned, to: &runInString, fps: runFrameRate)
 			} else {
-				let available = limit - runOutString.filter(\.isNumber).count
-				if available > 0 {
-					runOutString += String(cleaned.prefix(available))
-				}
+				appendDigits(cleaned, to: &runOutString, fps: runFrameRate)
 			}
 		case .conv:
-			let limit = digitLimit(for: convSourceRate)
-			let available = limit - convInputString.filter(\.isNumber).count
-			if available > 0 {
-				convInputString += String(cleaned.prefix(available))
-			}
+			appendDigits(cleaned, to: &convInputString, fps: convSourceRate)
 		}
 		saveState()
 	}
@@ -603,6 +592,25 @@ class AppViewModel {
 	}
 
 	// MARK: - SHARED FORMATTING HELPERS
+
+	/// Parses a raw digit/timecode string into an absolute frame count,
+	/// respecting the current TC/FR display mode.
+	/// - In FR mode: interprets the string as a plain integer frame count.
+	/// - In TC mode: parses as right-aligned HH:MM:SS:FF digits, with
+	///   drop-frame correction if the rate is DF.
+	func framesFromInput(_ raw: String, fps: FrameRate) -> Int {
+		isFramesMode
+			? (Int(raw) ?? 0)
+			: TimecodeCalculator.inputToFrames(input: raw, fps: fps)
+	}
+
+	/// Renders an absolute frame count as a user-facing display string,
+	/// respecting the current TC/FR display mode.
+	/// - In FR mode: the raw integer.
+	/// - In TC mode: SMPTE timecode string via `TimecodeFormatStyle`.
+	func displayString(forFrames frames: Int, fps: FrameRate) -> String {
+		isFramesMode ? "\(frames)" : frames.formatted(.timecode(at: fps))
+	}
 
 	/// Formats the calculator's current input for the hero display.
 	/// In FR mode, return the raw integer string.
