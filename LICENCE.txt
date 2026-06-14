@@ -1,0 +1,37 @@
+PostCode Licence
+
+Copyright © 2026 Martin McLean. All rights reserved.
+
+This source code is made publicly available for reference and transparency
+only. It is NOT open-source software, and no open-source licence is granted.
+
+WHAT YOU MAY DO
+  - View and read the source code.
+  - Reference it for personal, educational, or evaluation purposes.
+
+WHAT YOU MAY NOT DO
+  - Use the source code, or any portion of it, in your own projects, whether
+    commercial or non-commercial.
+  - Copy, modify, merge, publish, distribute, sublicense, or sell the source
+    code or any derivative of it.
+  - Publish this application, or any derivative of it, to the App Store or any
+    other distribution channel.
+  - Use the 'PostCode' name, icon, or branding.
+
+THE COMPILED APPLICATION
+  The compiled application is distributed exclusively through Apple's App Store
+  and is additionally governed by Apple's standard Licensed Application End
+  User License Agreement:
+  https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+NO WARRANTY
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+  COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY,
+  WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF,
+  OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+For permissions beyond the scope of this licence, please open an issue or
+contact the copyright holder.

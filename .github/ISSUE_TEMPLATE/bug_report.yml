@@ -1,0 +1,70 @@
+name: 🐛 Bug report
+description: Something in PostCode isn't working right.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. The more detail you give, the faster it can be fixed.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what actually happened?
+      placeholder: I entered… I expected… but instead…
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Which mode?
+      options:
+        - Calculator
+        - Run
+        - Converter
+        - Not sure / more than one
+    validations:
+      required: true
+  - type: input
+    id: frame-rate
+    attributes:
+      label: Frame rate
+      description: The frame rate in use when it happened (e.g. 25, 29.97 DF, or a custom rate).
+      placeholder: "25"
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can this be reproduced? Exact timecodes or values help a lot.
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: false
+  - type: input
+    id: device
+    attributes:
+      label: Device & OS
+      description: The iPhone/iPad/Mac model, and OS version.
+      placeholder: iPhone XR, iOS 18.7.9
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Shown on the App Store listing, the Settings page, or About dialog.
+      placeholder: "1.4"
+    validations:
+      required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or anything else
+      description: A screenshot or recording is gold — drag it in here.
+    validations:
+      required: false
